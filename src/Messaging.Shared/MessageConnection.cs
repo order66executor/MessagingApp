@@ -36,7 +36,7 @@ public class MessageConnection {
             try {
                 data = JsonSerializer.Deserialize<MessageData>(payloadBuffer);
             }
-            catch (JsonException e) {
+            catch (Exception e) {
                 Console.WriteLine($"Deserialization failed: {e.Message}" );
                 continue;
             }

@@ -9,7 +9,7 @@ public interface IMessageProtocol {
 
     Task IntroduceAsync(MessageConnection conn, int id, StringIdentifier identifier);
 
-    Task<StringIdentifier> ReceiveIntroductionAsync(MessageConnection conn);
+    StringIdentifier ReceiveIntroduction(MessageConnection conn);
 
     Task SendAckAsync(MessageConnection conn, int id, StringIdentifier source, StringIdentifier target, int idToAck);
 

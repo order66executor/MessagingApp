@@ -15,7 +15,7 @@ public class StandardProtocol : IMessageProtocol {
             Id = id,
             Type = MessageType.Introduction,
             SourceId = identifier,
-            TargetId = new StringIdentifier(null),
+            TargetId = new StringIdentifier("SYSTEM"),
             SentAtUtc = DateTime.UtcNow,
             Payload = Encoding.UTF8.GetBytes("Hello")
         };
@@ -23,9 +23,10 @@ public class StandardProtocol : IMessageProtocol {
         await conn.WriteAsync(message);
     }
 
-    public async Task<StringIdentifier> ReceiveIntroductionAsync(MessageConnection conn) {
-        conn.Buffer.TryDequeue(out MessageData message);
-        return message.SourceId;
+    public StringIdentifier ReceiveIntroduction(MessageConnection conn) {
+        conn.Buffer.TryDequeue(out MessageData? message);
+        if (message is not null) return message.SourceId;
+        else return new("Error");
     }
     public async Task SendAckAsync(MessageConnection conn, int id, StringIdentifier source, StringIdentifier target, int idToAck) {
         byte[] idAsBytes = new byte[4];

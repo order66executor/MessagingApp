@@ -5,39 +5,32 @@ namespace Messaging.Shared;
 //FIFO type 
 public class MessageDataBuffer : IDisposable {
 
-    public int Count { 
-        get;
-        set {
-            field = value;
-            if (field == 0) CanDispose.Set();
-            else CanDispose.Reset();
-        }
-    }
+    public int Count => queue.Count;
     private readonly ConcurrentQueue<MessageData> queue = [ ];
 
     public AutoResetEvent HasMessage { get; } = new(false);
 
-    public ManualResetEvent CanDispose { get; } = new(false);
+    public ManualResetEvent CanDispose { get; } = new(true);
 
 
     public void Enqueue(MessageData data) {
         queue.Enqueue(data);
-        ++Count;
+        HasMessage.Set();
+        CanDispose.Reset();
     }
 
-    public bool TryDequeue(out MessageData result) {
+    public bool TryDequeue(out MessageData? result) {
         if (queue.TryDequeue(out result)) {
-            --Count;
+            if (Count == 0) CanDispose.Set();
             return true;
         }
 
         else return false;
-        
-
     }
 
     public void Dispose() {
         HasMessage.Dispose();
+        CanDispose.Dispose();
     }
 
 }

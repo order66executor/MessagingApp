@@ -33,9 +33,11 @@ public class MessageClient {
         while ((username = Console.ReadLine()) is null);
 
         StringIdentifier selfId = new(username);
-        conn = new(client, ct);
 
         client.Connect(address, port);
+        conn = new(client, ct);
+
+        Task connTask = conn.StartAsync();
         await protocol.IntroduceAsync(conn, ++messageId, selfId);
 
         int waitResult;
@@ -49,6 +51,8 @@ public class MessageClient {
                 Console.WriteLine("Dequeue failed");
             }
         }
+
+        await connTask;
     }
 
 
