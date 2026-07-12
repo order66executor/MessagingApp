@@ -70,8 +70,11 @@ public class MessageServer {
 
         if ((waitResult = WaitHandle.WaitAny([conn.Buffer.HasMessage, ct.WaitHandle], 5000)) == 0) {
             StringIdentifier id = await protocol.ReceiveIntroductionAsync(conn);
+            Console.WriteLine($"Introduction received, ID: {id.Value}");
+
             users.Add(id, conn);
             outgoingBuffers.Add(conn, buffer);
+
             await protocol.SendAckAsync(conn, --messageId, new StringIdentifier("SYSTEM"), id, 1);
         }
         else {
@@ -83,20 +86,18 @@ public class MessageServer {
         while (!ct.IsCancellationRequested) {
             if ((waitResult = WaitHandle.WaitAny([conn.Buffer.HasMessage, buffer.HasMessage, ct.WaitHandle])) == 0) {
                 while (conn.Buffer.Count > 0) {
-                    if (conn.Buffer.TryDequeue(out MessageData data)) {
-                        await protocol.Process(data);
-                    }
-                    else {
-                        Console.WriteLine("Dequeue failed");
-                    }
+
+                    
 
                 }
             }
             else if (waitResult == 1) {
                 while (buffer.Count > 0 && !ct.IsCancellationRequested) {
+
                     if (buffer.TryDequeue(out MessageData data)) {
                         await conn.WriteAsync(data);
                     }
+
                     else {
                         Console.WriteLine("Dequeue failed");
                     }

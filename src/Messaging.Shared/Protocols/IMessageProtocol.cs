@@ -5,7 +5,7 @@ namespace Messaging.Shared.Protocols;
 
 public interface IMessageProtocol {
 
-    Task Process(MessageData data);
+    Task ProcessAsync(MessageData data);
 
     Task IntroduceAsync(MessageConnection conn, int id, StringIdentifier identifier);
 

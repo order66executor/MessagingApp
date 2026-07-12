@@ -7,8 +7,8 @@ namespace Messaging.Shared.Protocols;
 
 public class StandardProtocol : IMessageProtocol {
 
-    public async Task Process(MessageData data) {
-
+    public async Task ProcessAsync(MessageData data) {
+        if (data.Type == MessageType.Ack) Console.WriteLine("Ack received");
     }
     public async Task IntroduceAsync(MessageConnection conn, int id, StringIdentifier identifier) {
         MessageData message = new() {
