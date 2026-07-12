@@ -1,0 +1,5 @@
+<Solution>
+  <Project Path="src/Messaging.Server/Messaging.Server.csproj" />
+  <Project Path="src/Messaging.Client/Messaging.Client.csproj" />
+  <Project Path="src/Messaging.Shared/Messaging.Shared.csproj" />
+</Solution>
