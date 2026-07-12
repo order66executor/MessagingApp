@@ -1,4 +1,4 @@
-namespace Messaging.Shared.UserIdentifiers;
+namespace Messaging.Shared;
 using System.Text;
 
 public class StringIdentifier {

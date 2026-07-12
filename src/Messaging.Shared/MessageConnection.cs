@@ -17,6 +17,7 @@ public class MessageConnection {
         this.client = client;
         Buffer = new();
         stream = client.GetStream();
+        this.ct = ct;
     }
 
     public async Task StartAsync() {
@@ -43,12 +44,14 @@ public class MessageConnection {
             if (data is null) continue;
 
             Buffer.Enqueue(data);
-            Buffer.Notify();
+            Buffer.HasMessage.Set();
 
         }
 
         client.Close();
         client.Dispose();
+
+        Buffer.CanDispose.WaitOne();
         Buffer.Dispose();
 
     }

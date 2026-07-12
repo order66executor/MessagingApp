@@ -1,9 +1,9 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
 using Messaging.Shared;
 using Messaging.Shared.Protocols;
-using Messaging.Shared.UserIdentifiers;
 
 namespace Messaging.Server;
 
@@ -15,8 +15,7 @@ public class MessageServer {
 
     private readonly TcpListener listener;
 
-    private readonly Dictionary<MessageConnection, StringIdentifier> users;
-    private readonly Dictionary<IPAddress, MessageConnection> connections;
+    private readonly Dictionary<StringIdentifier, MessageConnection> users;
     private readonly Dictionary<MessageConnection, MessageDataBuffer> outgoingBuffers;
 
     private readonly List<Task> tasks;
@@ -26,7 +25,6 @@ public class MessageServer {
         this.protocol = protocol;
         listener = new(IPAddress.Any, Port);
         users = [ ];
-        connections = [ ];
         tasks = [ ];
         outgoingBuffers = [ ];
     }
@@ -56,15 +54,59 @@ public class MessageServer {
     }
 
     public async Task HandleConnectionAsync(TcpClient client, CancellationToken ct) {
-        MessageConnection conn = new(client, ct);
-        Task task;
-        task = conn.StartAsync();
+        CancellationTokenSource cts = new();
+
+        MessageConnection conn = new(client, cts.Token);
+
+        Task connTask;
+
+        connTask = conn.StartAsync();
+
+        int waitResult;
+        MessageDataBuffer buffer = new();
+
+        int messageId = 0;
 
 
+        if ((waitResult = WaitHandle.WaitAny([conn.Buffer.HasMessage, ct.WaitHandle], 5000)) == 0) {
+            StringIdentifier id = await protocol.ReceiveIntroductionAsync(conn);
+            users.Add(id, conn);
+            outgoingBuffers.Add(conn, buffer);
+            await protocol.SendAckAsync(conn, --messageId, new StringIdentifier("SYSTEM"), id, 1);
+        }
+        else {
+            Console.WriteLine("Introduction not received or operation cancelled");
+            cts.Cancel();
+        }
 
+        //TODO: make concurrent
+        while (!ct.IsCancellationRequested) {
+            if ((waitResult = WaitHandle.WaitAny([conn.Buffer.HasMessage, buffer.HasMessage, ct.WaitHandle])) == 0) {
+                while (conn.Buffer.Count > 0) {
+                    if (conn.Buffer.TryDequeue(out MessageData data)) {
+                        await protocol.Process(data);
+                    }
+                    else {
+                        Console.WriteLine("Dequeue failed");
+                    }
 
+                }
+            }
+            else if (waitResult == 1) {
+                while (buffer.Count > 0 && !ct.IsCancellationRequested) {
+                    if (buffer.TryDequeue(out MessageData data)) {
+                        await conn.WriteAsync(data);
+                    }
+                    else {
+                        Console.WriteLine("Dequeue failed");
+                    }
+                }
+            }
+        }
 
-        await task;
+        cts.Cancel();
+
+        await connTask;
     }
 
 }
