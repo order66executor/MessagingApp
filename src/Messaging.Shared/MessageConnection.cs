@@ -21,36 +21,46 @@ public class MessageConnection {
     }
 
     public async Task StartAsync() {
-        while (!ct.IsCancellationRequested) {
-            byte[] sizeBuffer = new byte[sizeByteCount];
-
-            await stream.ReadExactlyAsync(sizeBuffer, ct);
-
-            int size = BinaryPrimitives.ReadInt32BigEndian(sizeBuffer);
-            byte[] payloadBuffer = new byte[size];
-
-            await stream.ReadExactlyAsync(payloadBuffer, ct);
-
-            MessageData? data;
-
+        while (true) {
             try {
-                data = JsonSerializer.Deserialize<MessageData>(payloadBuffer);
+
+                byte[] sizeBuffer = new byte[sizeByteCount];
+
+                await stream.ReadExactlyAsync(sizeBuffer, ct);
+
+                int size = BinaryPrimitives.ReadInt32BigEndian(sizeBuffer);
+
+                if (size > 512) {
+                    Console.WriteLine($"Size is over 512, it is: {size}");
+                    throw new Exception();
+                }
+
+                byte[] payloadBuffer = new byte[size];
+
+                await stream.ReadExactlyAsync(payloadBuffer, ct);
+
+                MessageData? data;
+
+                try {
+                    data = JsonSerializer.Deserialize<MessageData>(payloadBuffer);
+                }
+                catch (Exception e) {
+                    Console.WriteLine($"Deserialization failed: {e.Message}" );
+                    continue;
+                }
+
+                if (data is null) continue;
+
+                await Buffer.Writer.WriteAsync(data);
+
             }
-            catch (Exception e) {
-                Console.WriteLine($"Deserialization failed: {e.Message}" );
-                continue;
+            finally {
+                client.Close();
+                client.Dispose();
+
+                Buffer.Dispose();
             }
-
-            if (data is null) continue;
-
-            Buffer.Writer.TryWrite(data);
-
         }
-
-        client.Close();
-        client.Dispose();
-
-        Buffer.Dispose();
 
     }
 

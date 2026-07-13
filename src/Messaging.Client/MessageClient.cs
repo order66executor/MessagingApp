@@ -13,7 +13,6 @@ public class MessageClient {
     private readonly IMessageProtocol protocol;
 
     private readonly TcpClient client;
-    private readonly MessageDataBuffer outBuffer;
 
     private MessageConnection? conn;
 
@@ -41,7 +40,7 @@ public class MessageClient {
 
         bool introduced;
         try {
-            await conn.Buffer.Writer.WriteAsync(protocol.CreateIntroduction(selfId));
+            await conn.WriteAsync(protocol.CreateIntroduction(selfId));
         }
         catch (OperationCanceledException) {
             Console.WriteLine("Introduction cancelled");
