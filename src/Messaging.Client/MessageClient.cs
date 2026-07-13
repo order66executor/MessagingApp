@@ -26,31 +26,50 @@ public class MessageClient {
     }
 
     public async Task RunAsync(CancellationToken ct) {
+        CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
         Console.Write("Enter username: ");
         string? username;
-        int messageId = 0;
 
         while ((username = Console.ReadLine()) is null);
 
         StringIdentifier selfId = new(username);
 
         client.Connect(address, port);
-        conn = new(client, ct);
+        conn = new(client, linked.Token);
 
         Task connTask = conn.StartAsync();
-        await protocol.IntroduceAsync(conn, ++messageId, selfId);
 
-        int waitResult;
-
-        if (WaitHandle.WaitAny([conn.Buffer.HasMessage, ct.WaitHandle], 5000) == 0) {
-            if (conn.Buffer.TryDequeue(out MessageData data)) {
-                        await protocol.ProcessAsync(data);
-                    }
-
-            else {
-                Console.WriteLine("Dequeue failed");
-            }
+        bool introduced;
+        try {
+            await conn.Buffer.Writer.WriteAsync(protocol.CreateIntroduction(selfId));
         }
+        catch (OperationCanceledException) {
+            Console.WriteLine("Introduction cancelled");
+        }
+
+
+        try {
+            introduced = (await conn.Buffer.Reader.ReadAsync(linked.Token)).Type == MessageType.Ack;
+        }
+        catch (OperationCanceledException) {
+            Console.WriteLine("ACK Read cancelled");
+            introduced = false;
+        }
+
+        MessageConnectionHandler handler;
+
+        if (introduced) {
+            handler = new(protocol, conn, linked.Token, 1, 1);
+        }
+        else {
+            Console.WriteLine("Unsuccessful introduction");
+            linked.Cancel();
+            await connTask;
+            return;
+        }
+
+        await handler.StartProcessingAsync();
+        
 
         await connTask;
     }

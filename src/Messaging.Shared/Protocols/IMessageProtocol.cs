@@ -5,12 +5,12 @@ namespace Messaging.Shared.Protocols;
 
 public interface IMessageProtocol {
 
-    Task ProcessAsync(MessageData data);
+    Task<bool> ProcessAsync(int id, MessageData data, MessageDataBuffer outBuf); 
 
-    Task IntroduceAsync(MessageConnection conn, int id, StringIdentifier identifier);
+    MessageData CreateIntroduction(StringIdentifier identifier);
 
-    StringIdentifier ReceiveIntroduction(MessageConnection conn);
+    StringIdentifier ReceiveIntroduction(MessageData message);
 
-    Task SendAckAsync(MessageConnection conn, int id, StringIdentifier source, StringIdentifier target, int idToAck);
+    MessageData CreateAck(int id, StringIdentifier source, StringIdentifier target, int idToAck);
 
 }

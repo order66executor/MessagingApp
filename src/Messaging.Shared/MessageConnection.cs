@@ -43,15 +43,13 @@ public class MessageConnection {
 
             if (data is null) continue;
 
-            Buffer.Enqueue(data);
-            Buffer.HasMessage.Set();
+            Buffer.Writer.TryWrite(data);
 
         }
 
         client.Close();
         client.Dispose();
 
-        Buffer.CanDispose.WaitOne();
         Buffer.Dispose();
 
     }

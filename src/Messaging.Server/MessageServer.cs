@@ -15,8 +15,7 @@ public class MessageServer {
 
     private readonly TcpListener listener;
 
-    private readonly ConcurrentDictionary<StringIdentifier, MessageConnection> users;
-    private readonly ConcurrentDictionary<MessageConnection, MessageDataBuffer> outgoingBuffers;
+    private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> users;
 
     private readonly List<Task> tasks;
 
@@ -26,7 +25,6 @@ public class MessageServer {
         listener = new(IPAddress.Any, Port);
         users = [ ];
         tasks = [ ];
-        outgoingBuffers = [ ];
     }
 
     public async Task RunAsync(CancellationToken ct) {
@@ -54,63 +52,49 @@ public class MessageServer {
     }
 
     public async Task HandleConnectionAsync(TcpClient client, CancellationToken ct) {
-        CancellationTokenSource cts = new();
+        using CancellationTokenSource cts = new();
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
 
-        MessageConnection conn = new(client, cts.Token);
+        MessageConnection conn = new(client, linked.Token);
 
         Task connTask;
 
         connTask = conn.StartAsync();
 
-        int waitResult;
-        MessageDataBuffer buffer = new();
+        using CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
+        introCts.CancelAfter(5000);
 
-        int messageId = 0;
+        bool introduced;
 
+        try {
+            await conn.Buffer.Reader.WaitToReadAsync(introCts.Token);
+            introduced = true;
+        }
+        catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
+            introduced = false;
+        }
 
-        if ((waitResult = WaitHandle.WaitAny([conn.Buffer.HasMessage, ct.WaitHandle], 5000)) == 0) {
-            StringIdentifier id = protocol.ReceiveIntroduction(conn);
+        MessageConnectionHandler handler;
+
+        if (introduced) {
+            StringIdentifier id = protocol.ReceiveIntroduction(await conn.Buffer.Reader.ReadAsync(linked.Token));
+
             Console.WriteLine($"Introduction received, ID: {id.Value}");
 
-            users.TryAdd(id, conn);
-            outgoingBuffers.TryAdd(conn, buffer);
+            handler = new(protocol, conn, linked.Token, -1, -1);
+            users.TryAdd(id, handler);
 
-            await protocol.SendAckAsync(conn, --messageId, new StringIdentifier("SYSTEM"), id, 1);
+            await handler.WriteToOutBufferAsync(protocol.CreateAck(0, new StringIdentifier("SYSTEM"), id, 1));
         }
         else {
             Console.WriteLine("Introduction not received or operation cancelled");
             cts.Cancel();
+            await connTask;
+            return;
         }
-
-        //TODO: make concurrent
-        while (!ct.IsCancellationRequested && !cts.IsCancellationRequested) {
-            if ((waitResult = WaitHandle.WaitAny([conn.Buffer.HasMessage, buffer.HasMessage, ct.WaitHandle])) == 0) {
-                while (conn.Buffer.Count > 0) {
-
-                //TODO
-
-                }
-            }
-            else if (waitResult == 1) {
-                while (buffer.Count > 0 && !ct.IsCancellationRequested) {
-
-                    if (buffer.TryDequeue(out MessageData? data)) {
-                        if (data is not null) await conn.WriteAsync(data);
-                    }
-
-                    else {
-                        Console.WriteLine("Dequeue failed");
-                    }
-                }
-            }
-        }
-
-        cts.Cancel();
         
-
+        await handler.StartProcessingAsync();
+        cts.Cancel();
         await connTask;
-        cts.Dispose();
-        buffer.Dispose();
     }
-
 }

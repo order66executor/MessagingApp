@@ -2,17 +2,18 @@
 
 using System.Buffers.Binary;
 using System.Text;
+using System.Threading.Channels;
 
 namespace Messaging.Shared.Protocols;
 
 public class StandardProtocol : IMessageProtocol {
-
-    public async Task ProcessAsync(MessageData data) {
-        if (data.Type == MessageType.Ack) Console.WriteLine("Ack received");
+    public async Task<bool> ProcessAsync(int id, MessageData message, MessageDataBuffer outBuf) {
+        if (message.Type == MessageType.Ack) Console.WriteLine("ACK RECV");
+        return false;
     }
-    public async Task IntroduceAsync(MessageConnection conn, int id, StringIdentifier identifier) {
-        MessageData message = new() {
-            Id = id,
+    public MessageData CreateIntroduction(StringIdentifier identifier) {
+        return new() {
+            Id = 0,
             Type = MessageType.Introduction,
             SourceId = identifier,
             TargetId = new StringIdentifier("SYSTEM"),
@@ -20,15 +21,12 @@ public class StandardProtocol : IMessageProtocol {
             Payload = Encoding.UTF8.GetBytes("Hello")
         };
 
-        await conn.WriteAsync(message);
     }
 
-    public StringIdentifier ReceiveIntroduction(MessageConnection conn) {
-        conn.Buffer.TryDequeue(out MessageData? message);
-        if (message is not null) return message.SourceId;
-        else return new("Error");
+    public StringIdentifier ReceiveIntroduction(MessageData message) {
+        return message.SourceId;
     }
-    public async Task SendAckAsync(MessageConnection conn, int id, StringIdentifier source, StringIdentifier target, int idToAck) {
+    public MessageData CreateAck(int id, StringIdentifier source, StringIdentifier target, int idToAck) {
         byte[] idAsBytes = new byte[4];
         BinaryPrimitives.WriteInt32BigEndian(idAsBytes, idToAck);
         MessageData message = new() {
@@ -40,6 +38,6 @@ public class StandardProtocol : IMessageProtocol {
             Payload = idAsBytes
         };
 
-        await conn.WriteAsync(message);
+        return message;
     }
 }
