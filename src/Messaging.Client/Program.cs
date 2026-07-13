@@ -16,14 +16,19 @@ public class Program {
         }
 
         if (int.TryParse(args[1], out int port) && IPAddress.TryParse(args[0], out IPAddress? address)) {
-            client = new(address, port, new StandardProtocol());
+            Console.Write("Enter username: ");
+            string? username;
+
+            while ((username = Console.ReadLine()) is null);
+            client = new(address, port, new StandardProtocol(), username);
         }
         else {
             Console.WriteLine("Invalid port number or address");
             return;
         }
-
+        Console.WriteLine("Starting client");
         Task clientTask = client.RunAsync(cts.Token);
+        Console.WriteLine("Client started");  
 
         while (!cts.IsCancellationRequested) {
             string? input = Console.ReadLine();

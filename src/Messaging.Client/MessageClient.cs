@@ -15,31 +15,30 @@ public class MessageClient {
     private readonly TcpClient client;
 
     private MessageConnection? conn;
+    string username;
 
-    public MessageClient(IPAddress address, int port, IMessageProtocol protocol) {
+    public MessageClient(IPAddress address, int port, IMessageProtocol protocol, string username) {
         this.address = address;
         this.port = port;
         this.protocol = protocol;
         client = new(AddressFamily.InterNetwork);
+        this.username = username;
     }
 
     public async Task RunAsync(CancellationToken ct) {
         CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
-        Console.Write("Enter username: ");
-        string? username;
-
-        while ((username = Console.ReadLine()) is null);
 
         StringIdentifier selfId = new(username);
 
         try {
+            Console.WriteLine("Attempting connection");
             client.Connect(address, port);
         }
         catch (Exception e) {
             Console.WriteLine($"Connection failed: {e}");
         }
 
-
+        Console.WriteLine("Connection successful");
         conn = new(client, linked.Token);
 
         Task connTask = conn.StartAsync();
