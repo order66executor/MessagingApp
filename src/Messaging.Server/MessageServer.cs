@@ -29,11 +29,13 @@ public class MessageServer {
 
     public async Task RunAsync(CancellationToken ct) {
         listener.Start();
+        Console.WriteLine("Listen started");
 
         while (!ct.IsCancellationRequested) {
             TcpClient client;
             try {
                 client = await listener.AcceptTcpClientAsync(ct);
+                Console.WriteLine("Connection accepted");
             }
             catch (OperationCanceledException) {
                 Console.WriteLine("TCP listening cancelled");
