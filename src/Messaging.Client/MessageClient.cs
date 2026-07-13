@@ -15,7 +15,7 @@ public class MessageClient {
     private readonly TcpClient client;
 
     private MessageConnection? conn;
-    string username;
+    private readonly string username;
 
     public MessageClient(IPAddress address, int port, IMessageProtocol protocol, string username) {
         this.address = address;
@@ -32,7 +32,7 @@ public class MessageClient {
 
         try {
             Console.WriteLine("Attempting connection");
-            client.Connect(address, port);
+            await client.ConnectAsync(address, port);
         }
         catch (Exception e) {
             Console.WriteLine($"Connection failed: {e}");
