@@ -105,7 +105,9 @@ public class MessageServer {
         MessageConnectionHandler handler = new(protocol, conn, linked.Token, -1, -1);
         users.TryAdd(id, handler);
         try {
+            Console.WriteLine("Replying ack");
             await handler.WriteToOutBufferAsync(protocol.CreateAck(0, new StringIdentifier("SYSTEM"), id, 1));
+            Console.WriteLine("Ack added to buffer");
             await handler.StartProcessingAsync();
         }
         finally {

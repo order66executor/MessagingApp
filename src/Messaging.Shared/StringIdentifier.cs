@@ -5,8 +5,8 @@ public class StringIdentifier {
 
     public string Value { get; }
     private static readonly UTF8Encoding utf8 = new(false, true);
-    public StringIdentifier(string? id) {
-        Value = id ?? throw new ArgumentException(nameof(id));
+    public StringIdentifier(string? value) {
+        Value = value ?? throw new ArgumentException(nameof(value));
     }
 
     public bool Equals(StringIdentifier? other) {

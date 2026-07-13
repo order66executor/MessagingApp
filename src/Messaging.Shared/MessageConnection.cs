@@ -21,9 +21,8 @@ public class MessageConnection {
     }
 
     public async Task StartAsync() {
-        while (true) {
-            try {
-
+        try {
+            while (true) {
                 byte[] sizeBuffer = new byte[sizeByteCount];
 
                 await stream.ReadExactlyAsync(sizeBuffer, ct);
@@ -54,12 +53,12 @@ public class MessageConnection {
                 await Buffer.Writer.WriteAsync(data);
 
             }
-            finally {
-                client.Close();
-                client.Dispose();
+        }
+        finally {
+            client.Close();
+            client.Dispose();
 
-                Buffer.Dispose();
-            }
+            Buffer.Dispose();
         }
 
     }
