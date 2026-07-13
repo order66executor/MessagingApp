@@ -63,6 +63,7 @@ public class MessageClient {
         MessageConnectionHandler handler;
 
         if (introduced) {
+            Console.WriteLine("ACK Received");
             handler = new(protocol, conn, linked.Token, 1, 1);
         }
         else {
