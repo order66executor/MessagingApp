@@ -20,7 +20,6 @@ public class MessageClient {
         this.address = address;
         this.port = port;
         this.protocol = protocol;
-        outBuffer = new();
         client = new(AddressFamily.InterNetwork);
     }
 
@@ -33,7 +32,14 @@ public class MessageClient {
 
         StringIdentifier selfId = new(username);
 
-        client.Connect(address, port);
+        try {
+            client.Connect(address, port);
+        }
+        catch (Exception e) {
+            Console.WriteLine($"Connection failed: {e}");
+        }
+
+
         conn = new(client, linked.Token);
 
         Task connTask = conn.StartAsync();
