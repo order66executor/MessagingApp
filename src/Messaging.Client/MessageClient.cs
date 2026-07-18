@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Sockets;
+using System.Runtime.CompilerServices;
 
 using Messaging.Shared;
 using Messaging.Shared.Protocols;
@@ -30,13 +31,20 @@ public class MessageClient {
 
         StringIdentifier selfId = new(username);
 
+        bool connectionSuccess = true;
+
         try {
             Console.WriteLine("Attempting connection");
             await client.ConnectAsync(address, port);
         }
         catch (Exception e) {
-            Console.WriteLine($"Connection failed: {e}");
+            Console.WriteLine($"Connection failed: {e.Message}");
+            client.Dispose();
+            connectionSuccess = false;
+            return;
         }
+
+        if (!connectionSuccess) return;
 
         Console.WriteLine("Connection successful");
         conn = new(client, linked.Token);

@@ -18,6 +18,11 @@ public class MessageConnection {
         Buffer = new();
         stream = client.GetStream();
         this.ct = ct;
+
+        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
+        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveTime, 10);
+        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveInterval, 10);
+        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveRetryCount, 5);
     }
 
     public async Task StartAsync() {
@@ -25,7 +30,13 @@ public class MessageConnection {
             while (true) {
                 byte[] sizeBuffer = new byte[sizeByteCount];
 
-                await stream.ReadExactlyAsync(sizeBuffer, ct);
+                try {
+                    await stream.ReadExactlyAsync(sizeBuffer, ct);
+                }
+                catch (Exception e) {
+                    Console.WriteLine($"Listening for incoming tcp packets aborted: {e.Message}");
+                    return;
+                }
 
                 int size = BinaryPrimitives.ReadInt32BigEndian(sizeBuffer);
 

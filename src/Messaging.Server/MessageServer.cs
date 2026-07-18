@@ -42,7 +42,7 @@ public class MessageServer {
                 break;
             }
             Guid taskId = Guid.NewGuid();
-            tasks[taskId] = TrackedHandleConnectionAsync(client, ct, taskId);
+            tasks[taskId] = TrackedHandleConnectionAsync(client, taskId, ct);
             
         }
 
@@ -53,7 +53,7 @@ public class MessageServer {
 
     }
 
-    private async Task TrackedHandleConnectionAsync(TcpClient client, CancellationToken ct, Guid taskId) {
+    private async Task TrackedHandleConnectionAsync(TcpClient client, Guid taskId, CancellationToken ct) {
         try {
             await HandleConnectionAsync(client, ct);
         }
