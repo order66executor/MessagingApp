@@ -1,6 +1,7 @@
 using System.Net;
 
-using Messaging.Shared.Protocols;
+using Messaging.Client.Protocols;
+using Messaging.Shared.Protocol;
 
 namespace Messaging.Client;
 
@@ -20,7 +21,7 @@ public class Program {
             string? username;
 
             while ((username = Console.ReadLine()) is null);
-            client = new(address, port, new StandardProtocol(), username);
+            client = new(address, port, new ClientProtocolFactory(), username);
         }
         else {
             Console.WriteLine("Invalid port number or address");

@@ -48,4 +48,6 @@ public class StringIdentifier {
         return utf8.GetBytes(Value);
     }
 
+    public override string ToString() => Value;
+
 }

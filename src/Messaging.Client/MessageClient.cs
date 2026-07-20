@@ -1,9 +1,8 @@
 using System.Net;
 using System.Net.Sockets;
-using System.Runtime.CompilerServices;
 
 using Messaging.Shared;
-using Messaging.Shared.Protocols;
+using Messaging.Client.Protocols;
 
 namespace Messaging.Client;
 
@@ -11,17 +10,19 @@ public class MessageClient {
 
     private readonly IPAddress address;
     private readonly int port;
-    private readonly IMessageProtocol protocol;
+    private IClientMessageProtocol? protocol;
+
+    private readonly IClientMessageProtocolFactory factory;
 
     private readonly TcpClient client;
 
     private MessageConnection? conn;
     private readonly string username;
 
-    public MessageClient(IPAddress address, int port, IMessageProtocol protocol, string username) {
+    public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username) {
         this.address = address;
         this.port = port;
-        this.protocol = protocol;
+        this.factory = factory;
         client = new(AddressFamily.InterNetwork);
         this.username = username;
     }
@@ -31,7 +32,6 @@ public class MessageClient {
 
         StringIdentifier selfId = new(username);
 
-        bool connectionSuccess = true;
 
         try {
             Console.WriteLine("Attempting connection");
@@ -40,18 +40,17 @@ public class MessageClient {
         catch (Exception e) {
             Console.WriteLine($"Connection failed: {e.Message}");
             client.Dispose();
-            connectionSuccess = false;
             return;
         }
-
-        if (!connectionSuccess) return;
 
         Console.WriteLine("Connection successful");
         conn = new(client, linked.Token);
 
         Task connTask = conn.StartAsync();
 
-        bool introduced;
+        MessageConnectionHandler handler = new(conn, linked.Token);
+        protocol = factory.CreateProtocol(0, selfId, handler);
+
         try {
             await conn.WriteAsync(protocol.CreateIntroduction(selfId));
         }
@@ -59,20 +58,36 @@ public class MessageClient {
             Console.WriteLine("Introduction cancelled");
         }
 
+        CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
+        introCts.CancelAfter(5000);
 
+        bool response = false;
         try {
-            introduced = (await conn.Buffer.Reader.ReadAsync(linked.Token)).Type == MessageType.Ack;
+            response = await handler.WaitForIncomingAsync(introCts.Token);
+        }
+        catch (OperationCanceledException) when (!linked.IsCancellationRequested) {
+            Console.WriteLine("Problem while waiting to receive ack");
+        }
+
+        if (!response) {
+            Console.WriteLine("Timeout waiting for ack");
+            linked.Cancel();
+            await connTask;
+            return;
+        }
+        
+        bool introduced;
+        try {
+            introduced = (await handler.ReadOneIncomingAsync(linked.Token)).Type == MessageType.Ack;
         }
         catch (OperationCanceledException) {
             Console.WriteLine("ACK Read cancelled");
             introduced = false;
         }
 
-        MessageConnectionHandler handler;
 
         if (introduced) {
             Console.WriteLine("ACK Received");
-            handler = new(protocol, conn, linked.Token, 1, 1);
         }
         else {
             Console.WriteLine("Unsuccessful introduction");
@@ -81,7 +96,7 @@ public class MessageClient {
             return;
         }
 
-        await handler.StartProcessingAsync();
+        await handler.StartProcessingAsync(protocol);
         
 
         await connTask;

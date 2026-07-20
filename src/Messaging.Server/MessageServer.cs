@@ -3,7 +3,7 @@ using System.Net;
 using System.Net.Sockets;
 
 using Messaging.Shared;
-using Messaging.Shared.Protocols;
+using Messaging.Server.Protocols;
 
 namespace Messaging.Server;
 
@@ -11,19 +11,19 @@ public class MessageServer {
 
     public int Port { get; set; }
 
-    private readonly IMessageProtocol protocol;
+    private readonly IServerMessageProtocol protocol;
 
     private readonly TcpListener listener;
 
-    private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> users;
+    private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
 
     private readonly ConcurrentDictionary<Guid, Task> tasks;
 
-    public MessageServer(int port, IMessageProtocol protocol) {
+    public MessageServer(int port, IServerMessageProtocolFactory factory) {
         Port = port;
-        this.protocol = protocol;
         listener = new(IPAddress.Any, Port);
-        users = [ ];
+        this.handlers = new();
+        protocol = factory.CreateProtocol(0, handlers);
         tasks = [ ];
     }
 
@@ -81,9 +81,10 @@ public class MessageServer {
         introCts.CancelAfter(5000);
 
         bool introduced;
+        MessageConnectionHandler handler = new(conn, linked.Token);
 
         try {
-            await conn.Buffer.Reader.WaitToReadAsync(introCts.Token);
+            await handler.WaitForIncomingAsync(introCts.Token);
             introduced = true;
         }
         catch (OperationCanceledException) when (!ct.IsCancellationRequested) {
@@ -98,20 +99,19 @@ public class MessageServer {
             return;
         }
 
-        StringIdentifier id = protocol.ReceiveIntroduction(await conn.Buffer.Reader.ReadAsync(linked.Token));
+        StringIdentifier id = protocol.ReceiveIntroduction(await handler.ReadOneIncomingAsync(linked.Token));
 
         Console.WriteLine($"Introduction received, ID: {id.Value}");
 
-        MessageConnectionHandler handler = new(protocol, conn, linked.Token, -1, -1);
-        users.TryAdd(id, handler);
+        handlers.TryAdd(id, handler);
         try {
             Console.WriteLine("Replying ack");
-            await handler.WriteToOutBufferAsync(protocol.CreateAck(0, new StringIdentifier("SYSTEM"), id, 1));
+            await handler.WriteToOutBufferAsync(protocol.CreateAck(new StringIdentifier("SYSTEM"), id, 0));
             Console.WriteLine("Ack added to buffer");
-            await handler.StartProcessingAsync();
+            await handler.StartProcessingAsync(protocol);
         }
         finally {
-            users.TryRemove(id, out _);
+            handlers.TryRemove(id, out _);
             cts.Cancel();
             await connTask;
         }

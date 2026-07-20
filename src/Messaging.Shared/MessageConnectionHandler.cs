@@ -1,28 +1,22 @@
-using Messaging.Shared.Protocols;
+using Messaging.Shared.Protocol;
 
 namespace Messaging.Shared;
 
 public class MessageConnectionHandler {
 
-    private readonly IMessageProtocol protocol;
     private readonly MessageConnection conn;
     private readonly MessageDataBuffer outBuffer;
     private readonly CancellationTokenSource ct;
 
-    private int outIdCounter;
-    private readonly int idIncrement;
 
-    public MessageConnectionHandler(IMessageProtocol protocol, MessageConnection conn, CancellationToken ct, int startingOutId, int idIncrement) {
-        this.protocol = protocol;
+    public MessageConnectionHandler(MessageConnection conn, CancellationToken ct) {
         this.conn = conn;
         this.ct = CancellationTokenSource.CreateLinkedTokenSource(ct);
         this.outBuffer = new();
-        outIdCounter = startingOutId;
-        this.idIncrement = idIncrement;
     }
 
-    public async Task StartProcessingAsync() {
-        Task incomingTask = ProcessIncomingAsync();
+    public async Task StartProcessingAsync(IMessageProtocol protocol) {
+        Task incomingTask = ProcessIncomingAsync(protocol);
         Task outgoingTask = ProcessOutgoingAsync();
 
         await Task.WhenAny(incomingTask, outgoingTask);
@@ -31,11 +25,13 @@ public class MessageConnectionHandler {
         outBuffer.Dispose();
     }
 
-    private async Task ProcessIncomingAsync() {
+    private async Task ProcessIncomingAsync(IMessageProtocol protocol) {
         try {
             await foreach (MessageData data in conn.Buffer.Reader.ReadAllAsync(ct.Token)) {
-                if (await protocol.ProcessAsync(outIdCounter, data, outBuffer)) {
-                    outIdCounter += idIncrement;
+                if (await protocol.ProcessAsync(data)) {
+                }
+                else {
+                    Console.WriteLine("Error processing message");
                 }
             }
         }
@@ -58,5 +54,13 @@ public class MessageConnectionHandler {
 
     public async Task WriteToOutBufferAsync(MessageData message) {
         await outBuffer.Writer.WriteAsync(message, ct.Token);
+    }
+
+    public async Task<bool> WaitForIncomingAsync(CancellationToken ct) {
+        return await conn.Buffer.Reader.WaitToReadAsync(ct);
+    }
+
+    public async Task<MessageData> ReadOneIncomingAsync(CancellationToken ct) {
+        return await conn.Buffer.Reader.ReadAsync(ct);
     }
 }

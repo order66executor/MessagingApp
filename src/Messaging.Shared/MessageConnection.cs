@@ -20,9 +20,9 @@ public class MessageConnection {
         this.ct = ct;
 
         client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
-        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveTime, 10);
-        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveInterval, 10);
-        client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.TcpKeepAliveRetryCount, 5);
+        client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveTime, 10);
+        client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 10);
+        client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, 5);
     }
 
     public async Task StartAsync() {

@@ -1,7 +1,7 @@
-using System;
-using System.Net.Sockets;
+using System.Collections.Concurrent;
+
+using Messaging.Server.Protocols;
 using Messaging.Shared;
-using Messaging.Shared.Protocols;
 namespace Messaging.Server;
 
 public class Program {
@@ -18,7 +18,8 @@ public class Program {
         }
 
         if (int.TryParse(args[0], out int port)) {
-            server = new MessageServer(port, new StandardProtocol());
+            ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers = [ ];
+            server = new MessageServer(port, new ServerProtocolFactory());
         }
         else {
             Console.WriteLine("Invalid port number");
