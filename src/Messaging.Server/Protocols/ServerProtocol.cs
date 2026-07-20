@@ -27,11 +27,10 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 return true;
             
             case MessageType.TextMessage:
-                Console.WriteLine($"Text message received from: {message.SourceId} to: {message.TargetId} sent at: {message.SentAtUtc} content: {Encoding.UTF8.GetString(message.Payload)}");
+                Console.WriteLine($"Text message with ID: {message.Id} received from: {message.SourceId} to: {message.TargetId} sent at: {message.SentAtUtc} content: {Encoding.UTF8.GetString(message.Payload)}");
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler)) {
                     try {
-                        await EnqueueAck(counters.GetOrAdd(message.SourceId, 1) ,handler, new StringIdentifier("SYSTEM"), message.SourceId, message.Id);
-                        counters[message.SourceId]++;
+                        await EnqueueAck(counters.AddOrUpdate(message.SourceId, 1, (_, value) => value + 1) ,handler, new StringIdentifier("SYSTEM"), message.SourceId, message.Id);
                     }
                     catch (Exception e) {
                         Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");

@@ -26,7 +26,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
                 return true;
 
             case MessageType.TextMessage:
-                Console.WriteLine($"Message received from: {message.SourceId}, content: {Encoding.UTF8.GetString(message.Payload)}");
+                Console.WriteLine($"Message ID: {message.Id} received from: {message.SourceId}, content: {Encoding.UTF8.GetString(message.Payload)}");
                 await EnqueueAck(idCounter++, handler, identifier, new StringIdentifier("SYSTEM"), message.Id);
                 return true;
 
