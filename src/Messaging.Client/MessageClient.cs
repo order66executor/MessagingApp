@@ -3,6 +3,7 @@ using System.Net.Sockets;
 
 using Messaging.Shared;
 using Messaging.Client.Protocols;
+using System.Runtime.InteropServices;
 
 namespace Messaging.Client;
 
@@ -17,6 +18,7 @@ public class MessageClient {
     private readonly TcpClient client;
 
     private MessageConnection? conn;
+    private MessageConnectionHandler? handler;
     private readonly string username;
 
     public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username) {
@@ -48,11 +50,11 @@ public class MessageClient {
 
         Task connTask = conn.StartAsync();
 
-        MessageConnectionHandler handler = new(conn, linked.Token);
+        handler = new(conn, linked.Token);
         protocol = factory.CreateProtocol(0, selfId, handler);
 
         try {
-            await conn.WriteAsync(protocol.CreateIntroduction(selfId));
+            await conn.WriteAsync(protocol.CreateIntroduction());
         }
         catch (OperationCanceledException) {
             Console.WriteLine("Introduction cancelled");
@@ -102,6 +104,9 @@ public class MessageClient {
         await connTask;
     }
 
-
+    public async Task SendTextMessageAsync(string target, string text) {
+        if (handler is null || protocol is null) return;
+        await handler.WriteToOutBufferAsync(protocol.CreateTextMessage(new StringIdentifier(target), text));
+    }
 
 }

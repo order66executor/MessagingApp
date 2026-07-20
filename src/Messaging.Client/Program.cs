@@ -1,7 +1,6 @@
 using System.Net;
 
 using Messaging.Client.Protocols;
-using Messaging.Shared.Protocol;
 
 namespace Messaging.Client;
 
@@ -36,9 +35,21 @@ public class Program {
 
             if (input is null) continue;
 
-            if (input == "quit") {
-                Console.WriteLine("Cancel request received");
-                cts.Cancel();
+            List<string> parsed = ParseString(input);
+
+            switch (parsed[0]) {
+                case "quit":
+                    Console.WriteLine("Cancel request received");
+                    cts.Cancel();
+                    break;
+
+                case "send":
+                    await client.SendTextMessageAsync(parsed[1], parsed[2]);
+                    break;
+
+                default:
+                    break;
+                
             }
 
         }
@@ -48,5 +59,55 @@ public class Program {
 
     }
 
+    static List<string> ParseString(string str) {
+        List<string> ret = [ ];
 
+        int brackets = 0;
+        string curr = "";
+
+        foreach (char c in str) {
+            if (c != ' ' && c != '\n') {
+                if (c == '[') {
+
+                    brackets++;
+
+                    if (brackets > 1) {
+                        curr += c;
+                    }
+                }
+                else if (c == ']') {
+
+                    brackets--;
+
+                    if (brackets == 0) {
+                        ret.Add(curr);
+                        curr = "";
+                    }
+                    else {
+                        curr += c;
+                    }
+                }
+                else {
+                    curr += c;
+                }
+            }
+
+            else {
+                if (brackets > 0) {
+                    curr += c;
+                }
+                else {
+                    if (curr == "") continue;
+                    ret.Add(curr);
+                    curr = "";
+                }
+            }
+
+        }
+
+        if (curr != "") ret.Add(curr);
+
+        return ret;
+
+    }
 }

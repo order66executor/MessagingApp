@@ -11,7 +11,10 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
     private readonly StringIdentifier identifier;
 
-    public ClientProtocol(int startingId, StringIdentifier identifier, MessageConnectionHandler handler) : base(startingId) {
+    private int idCounter;
+
+    public ClientProtocol(int startingId, StringIdentifier identifier, MessageConnectionHandler handler) {
+        idCounter = startingId;
         this.handler = handler;
         this.identifier = identifier;
     }
@@ -24,7 +27,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
             case MessageType.TextMessage:
                 Console.WriteLine($"Message received from: {message.SourceId}, content: {Encoding.UTF8.GetString(message.Payload)}");
-                await EnqueueAck(handler, identifier, new StringIdentifier("SYSTEM"), message.Id);
+                await EnqueueAck(idCounter++, handler, identifier, new StringIdentifier("SYSTEM"), message.Id);
                 return true;
 
             default:
@@ -33,9 +36,9 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
         }
     }
 
-    public MessageData CreateIntroduction(StringIdentifier identifier) {
+    public MessageData CreateIntroduction() {
         return new() {
-            Id = 0,
+            Id = idCounter++,
             Type = MessageType.Introduction,
             SourceId = identifier,
             TargetId = new StringIdentifier("SYSTEM"),
@@ -44,5 +47,17 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
         };
 
     }
+
+    public MessageData CreateTextMessage(StringIdentifier target, string text) {
+        return new() {
+            Id = idCounter++,
+            Type = MessageType.TextMessage,
+            SourceId = identifier,
+            TargetId = target,
+            SentAtUtc = DateTime.UtcNow,
+            Payload = Encoding.UTF8.GetBytes(text)
+        };
+    }
+
 }
 

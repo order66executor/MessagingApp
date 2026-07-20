@@ -2,6 +2,7 @@ using Messaging.Shared;
 using Messaging.Shared.Protocol;
 
 using System.Collections.Concurrent;
+using System.Diagnostics.Metrics;
 using System.Text;
 
 namespace Messaging.Server.Protocols;
@@ -10,8 +11,11 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
 
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
 
-    public ServerProtocol(int startingId, ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers) : base(startingId) {
+    private readonly ConcurrentDictionary<StringIdentifier, int> counters;
+
+    public ServerProtocol(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers) {
         this.handlers = handlers;
+        counters = new();
     }
 
     public StringIdentifier ReceiveIntroduction(MessageData message) => message.SourceId;
@@ -26,7 +30,8 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 Console.WriteLine($"Text message received from: {message.SourceId} to: {message.TargetId} sent at: {message.SentAtUtc} content: {Encoding.UTF8.GetString(message.Payload)}");
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler)) {
                     try {
-                        await EnqueueAck(handler, new StringIdentifier("SYSTEM"), message.SourceId, message.Id);
+                        await EnqueueAck(counters.GetOrAdd(message.SourceId, 1) ,handler, new StringIdentifier("SYSTEM"), message.SourceId, message.Id);
+                        counters[message.SourceId]++;
                     }
                     catch (Exception e) {
                         Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
@@ -37,6 +42,9 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 }
 
                 if (handlers.TryGetValue(message.TargetId, out handler)) {
+                    message.Id = counters.AddOrUpdate(message.TargetId, 1, (_, value) => value + 1);
+                    message.SentAtUtc = DateTime.UtcNow;
+
                     try {
                         await handler.WriteToOutBufferAsync(message);
                     }
