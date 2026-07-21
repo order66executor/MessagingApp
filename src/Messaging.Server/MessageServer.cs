@@ -115,7 +115,7 @@ public class MessageServer {
         handlers.TryAdd(id, handler);
         try {
             Console.WriteLine("Replying ack");
-            await handler.WriteToOutBufferAsync(protocol.CreateAck(0, new StringIdentifier("SYSTEM"), id, 0));
+            await handler.WriteToOutBufferAsync(protocol.CreateAck(new StringIdentifier("SYSTEM"), id, 0));
             Console.WriteLine("Ack added to buffer");
             await router.DeliverPendingMessagesAsync(id, handler);
             await handler.StartProcessingAsync(protocol);

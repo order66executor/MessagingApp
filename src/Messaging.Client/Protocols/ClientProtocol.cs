@@ -27,7 +27,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
             case MessageType.TextMessage:
                 Console.WriteLine($"Message ID: {message.Id} received from: {message.SourceId}, content: {Encoding.UTF8.GetString(message.Payload)}");
-                await EnqueueAck(idCounter++, handler, identifier, new StringIdentifier("SYSTEM"), message.Id);
+                await EnqueueAck(handler, identifier, new StringIdentifier("SYSTEM"), message.Id);
                 return true;
 
             default:
@@ -38,7 +38,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
     public MessageData CreateIntroduction() {
         return new() {
-            Id = idCounter++,
+            Id = 0,
             Type = MessageType.Introduction,
             SourceId = identifier,
             TargetId = new StringIdentifier("SYSTEM"),

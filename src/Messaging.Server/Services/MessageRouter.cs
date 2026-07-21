@@ -29,21 +29,23 @@ public class MessageRouter {
 
         using var db = CreateDbContext();
 
-        long maxSequenceId = await db.Messages
-            .Where(m => m.ConversationKey == conversationKey)
-            .Select(m => (long?)m.SequenceId)
-            .MaxAsync() ?? 0;
+        // long maxSequenceId = await db.Messages
+        //     .Where(m => m.ConversationKey == conversationKey)
+        //     .Select(m => (long?)m.SequenceId)
+        //     .MaxAsync() ?? 0;
 
-        long nextSequenceId = maxSequenceId + 1;
+        // long nextSequenceId = maxSequenceId + 1;
+
+
 
         ServerMessageWrapper wrapper = new() {
             ConversationKey = conversationKey,
-            SequenceId = nextSequenceId,
+            SequenceId = message.Id,
             SenderUsername = message.SourceId.Value,
             ReceiverUsername = message.TargetId.Value,
             SerializedMessageData = JsonSerializer.SerializeToUtf8Bytes(message),
             StoredAtUtc = DateTimeOffset.UtcNow,
-            Delivered = false
+            State = MessageState.Waiting
         };
 
         db.Messages.Add(wrapper);
@@ -52,7 +54,7 @@ public class MessageRouter {
         if (handlers.TryGetValue(message.TargetId, out MessageConnectionHandler? targetHandler)) {
             try {
                 await targetHandler.WriteToOutBufferAsync(message);
-                wrapper.Delivered = true;
+                wrapper.State = MessageState.Sent;
                 await db.SaveChangesAsync();
                 Console.WriteLine($"Message routed to {message.TargetId.Value}");
             }
@@ -61,6 +63,8 @@ public class MessageRouter {
             }
         }
         else {
+            wrapper.State = MessageState.Unsent;
+            await db.SaveChangesAsync();
             Console.WriteLine($"User {message.TargetId.Value} offline, message stored in DB");
         }
     }
@@ -69,7 +73,7 @@ public class MessageRouter {
         using var db = CreateDbContext();
 
         var pendingMessages = await db.Messages
-            .Where(m => m.ReceiverUsername == userId.Value && m.Delivered == false)
+            .Where(m => m.ReceiverUsername == userId.Value && m.State == MessageState.Unsent)
             .OrderBy(m => m.SequenceId)
             .ToListAsync();
 
@@ -78,7 +82,7 @@ public class MessageRouter {
                 MessageData? messageData = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
                 if (messageData != null) {
                     await handler.WriteToOutBufferAsync(messageData);
-                    wrapper.Delivered = true;
+                    wrapper.State = MessageState.Sent;
                 }
             }
             catch (Exception e) {

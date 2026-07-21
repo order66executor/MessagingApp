@@ -51,7 +51,7 @@ public class MessageClient {
         Task connTask = conn.StartAsync();
 
         handler = new(conn, linked.Token);
-        protocol = factory.CreateProtocol(0, selfId, handler);
+        protocol = factory.CreateProtocol(1, selfId, handler);
 
         try {
             await conn.WriteAsync(protocol.CreateIntroduction());

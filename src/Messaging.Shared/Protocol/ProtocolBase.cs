@@ -7,20 +7,18 @@ public abstract class ProtocolBase : IMessageProtocol {
 
     public abstract Task<bool> ProcessAsync(MessageData message);
 
-    protected async Task EnqueueAck(int id, MessageConnectionHandler handler, StringIdentifier source, StringIdentifier target, int idToAck) {
-        await handler.WriteToOutBufferAsync(CreateAck(id, source, target, idToAck));
+    protected async Task EnqueueAck(MessageConnectionHandler handler, StringIdentifier source, StringIdentifier target, int idToAck) {
+        await handler.WriteToOutBufferAsync(CreateAck(source, target, idToAck));
     }
 
-    public virtual MessageData CreateAck(int id, StringIdentifier source, StringIdentifier target, int idToAck) {
-        byte[] idAsBytes = new byte[4];
-        BinaryPrimitives.WriteInt32BigEndian(idAsBytes, idToAck);
+    public virtual MessageData CreateAck(StringIdentifier source, StringIdentifier target, int idToAck) {
         MessageData message = new() {
-            Id = id,
+            Id = idToAck,
             Type = MessageType.Ack,
             SourceId = source,
             TargetId = target,
             SentAtUtc = DateTime.UtcNow,
-            Payload = idAsBytes
+            Payload = [ ]
         };
 
         return message;
