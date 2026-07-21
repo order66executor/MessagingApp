@@ -9,14 +9,16 @@ namespace Messaging.Server.Services;
 
 public class MessageRouter {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
-    private readonly MessagingDbContext db;
+    private readonly string dbPath;
 
-    public MessageRouter(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, MessagingDbContext db) {
+    public MessageRouter(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, string dbPath = "messaging.db") {
         this.handlers = handlers;
-        this.db = db;
+        this.dbPath = dbPath;
     }
 
-    private string GetConversationKey(StringIdentifier userA, StringIdentifier userB) {
+    private MessagingDbContext CreateDbContext() => new(dbPath);
+
+    private static string GetConversationKey(StringIdentifier userA, StringIdentifier userB) {
         return string.Compare(userA.Value, userB.Value, StringComparison.Ordinal) < 0
             ? $"{userA.Value}::{userB.Value}"
             : $"{userB.Value}::{userA.Value}";
@@ -25,11 +27,8 @@ public class MessageRouter {
     public async Task RouteMessageAsync(MessageData message) {
         string conversationKey = GetConversationKey(message.SourceId, message.TargetId);
 
-        // Run DB operations synchronously in this simple implementation, or await EF Core async methods
-        // To avoid concurrency issues on SequenceId generation for the same conversation, a more robust 
-        // approach would involve transactions or retry logic. For now we use basic locking or just hope 
-        // the unique index catches races and we can retry, but for simplicity we will just do a standard query.
-        
+        using var db = CreateDbContext();
+
         long maxSequenceId = await db.Messages
             .Where(m => m.ConversationKey == conversationKey)
             .Select(m => (long?)m.SequenceId)
@@ -67,6 +66,8 @@ public class MessageRouter {
     }
 
     public async Task DeliverPendingMessagesAsync(StringIdentifier userId, MessageConnectionHandler handler) {
+        using var db = CreateDbContext();
+
         var pendingMessages = await db.Messages
             .Where(m => m.ReceiverUsername == userId.Value && m.Delivered == false)
             .OrderBy(m => m.SequenceId)
@@ -85,7 +86,7 @@ public class MessageRouter {
             }
         }
 
-        if (pendingMessages.Any()) {
+        if (pendingMessages.Count > 0) {
             await db.SaveChangesAsync();
             Console.WriteLine($"Delivered {pendingMessages.Count} pending messages to {userId.Value}");
         }

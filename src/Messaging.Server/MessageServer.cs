@@ -20,7 +20,6 @@ public class MessageServer {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
 
     private readonly ConcurrentDictionary<Guid, Task> tasks;
-    private readonly MessagingDbContext db;
     private readonly MessageRouter router;
 
     public MessageServer(int port, IServerMessageProtocolFactory factory) {
@@ -28,9 +27,10 @@ public class MessageServer {
         listener = new(IPAddress.Any, Port);
         this.handlers = new();
         
-        db = new MessagingDbContext();
-        db.Database.EnsureCreated();
-        router = new MessageRouter(handlers, db);
+        using (var db = new MessagingDbContext()) {
+            db.Database.EnsureCreated();
+        }
+        router = new MessageRouter(handlers);
         
         protocol = factory.CreateProtocol(0, handlers, router);
         tasks = [ ];
