@@ -50,21 +50,21 @@ public class ClientDbHandler {
 
 
     // gets highest id for target
-    public async Task<long> GetHighestIdAsync(StringIdentifier target) {
+    public async Task<long> GetHighestSequenceIdAsync(StringIdentifier target) {
         using var db = CreateDbContext();
         return await db.Messages
             .Where(m => m.ReceiverUsername == target.Value)
-            .Select(m => (long?)m.Id)
+            .Select(m => (long?)m.SequenceId)
             .MaxAsync() ?? 0;
     }
 
     // returns all messages that are sent by or to user. ordered by SentAtUtc
 
-    public async Task<MessageWrapper[]> GetMessagesAsync(StringIdentifier user) {
+    public async Task<MessageWrapper[]> GetMessagesAsync(string conversationKey) {
         using var db = CreateDbContext();
         return await db.Messages
             .AsNoTracking()
-            .Where(m => m.SenderUsername == user.Value || m.ReceiverUsername == user.Value)
+            .Where(m => m.ConversationKey == conversationKey)
             .OrderBy(m => m.StoredAtUtc)
             .ToArrayAsync();
     }

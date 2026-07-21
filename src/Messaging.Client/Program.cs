@@ -4,6 +4,7 @@ using System.Text.Json;
 
 using Messaging.Client.Protocols;
 using Messaging.Shared;
+using Messaging.Shared.Data;
 using Messaging.Shared.Models;
 
 namespace Messaging.Client;
@@ -11,6 +12,7 @@ namespace Messaging.Client;
 public class Program {
 
     private static MessageClient? client;
+    private static string? username;
 
     private static readonly CancellationTokenSource cts = new();
     public static async Task Main(string[] args) {
@@ -21,7 +23,6 @@ public class Program {
 
         if (int.TryParse(args[1], out int port) && IPAddress.TryParse(args[0], out IPAddress? address)) {
             Console.Write("Enter username: ");
-            string? username;
 
             while ((username = Console.ReadLine()) is null);
             client = new(address, port, new ClientProtocolFactory(), username);
@@ -31,13 +32,18 @@ public class Program {
             return;
         }
         Console.WriteLine("Starting client");
-        Task clientTask = client.RunAsync(cts.Token);
+        Task clientTask = client.RunAsync(cts);
         Console.WriteLine("Client started");  
 
         while (!cts.IsCancellationRequested) {
-            string? input = Console.ReadLine();
+            string? input;
+            var readTask = Task.Run(Console.ReadLine);
+            if (await Task.WhenAny(readTask, Task.Delay(Timeout.Infinite, cts.Token)) == readTask)
+                input = readTask.Result;
+            else continue;
 
-            if (input is null) continue;
+
+            if (input is null || input.IsWhiteSpace()) continue;
 
             List<string> parsed = ParseString(input);
 
@@ -52,7 +58,7 @@ public class Program {
                     break;
 
                 case "read":
-                    foreach (MessageWrapper wrapper in await client.DbHandler.GetMessagesAsync(new StringIdentifier(parsed[1]))) {
+                    foreach (MessageWrapper wrapper in await client.DbHandler.GetMessagesAsync(DbUtil.GetConversationKey(new StringIdentifier(username), new StringIdentifier(parsed[1])))) {
                         MessageData? message = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
                         if (message is not null)
                             Console.WriteLine($"Message ID: {message.Id} sent by: {message.SourceId} at: {message.SentAtUtc}, content: {Encoding.UTF8.GetString(message.Payload)}");

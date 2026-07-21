@@ -54,7 +54,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
     public async Task SendTextMessageAsync(StringIdentifier target, string text) {
         MessageData message = new() {
-            Id = await dbHandler.GetHighestIdAsync(target) + 1,
+            Id = await dbHandler.GetHighestSequenceIdAsync(target) + 1,
             Type = MessageType.TextMessage,
             SourceId = identifier,
             TargetId = target,

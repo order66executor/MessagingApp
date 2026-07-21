@@ -35,7 +35,8 @@ public class MessageClient {
     }
 
     // Connects and introduces to server, then starts listening for incoming and outgoing messages
-    public async Task RunAsync(CancellationToken ct) {
+    public async Task RunAsync(CancellationTokenSource cts) {
+        CancellationToken ct = cts.Token;
         CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         StringIdentifier selfId = new(username);
@@ -115,9 +116,9 @@ public class MessageClient {
 
         // Start listening for incoming and outgoing messages
         await handler.StartProcessingAsync(protocol);
-        
 
         await connTask;
+        cts.Cancel();
     }
 
     // Queue a text message to the outgoing buffer
