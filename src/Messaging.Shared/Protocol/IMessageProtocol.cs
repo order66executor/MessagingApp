@@ -7,6 +7,6 @@ public interface IMessageProtocol {
 
     Task<bool> ProcessAsync(MessageData message);
 
-    MessageData CreateAck(StringIdentifier source, StringIdentifier target, int idToAck);
+    MessageData CreateAck(StringIdentifier source, StringIdentifier target, long idToAck);
 
 }

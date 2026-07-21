@@ -5,5 +5,5 @@ using Messaging.Shared.Protocol;
 
 public interface IClientMessageProtocol : IMessageProtocol {
     MessageData CreateIntroduction();
-    MessageData CreateTextMessage(StringIdentifier target, string text);
+    Task SendTextMessageAsync(StringIdentifier target, string text);
 }

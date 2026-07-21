@@ -31,7 +31,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 Console.WriteLine($"Text message with ID: {message.Id} received from: {message.SourceId} to: {message.TargetId} sent at: {message.SentAtUtc} content: {Encoding.UTF8.GetString(message.Payload)}");
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler)) {
                     try {
-                        await EnqueueAck(handler, new StringIdentifier("SYSTEM"), message.SourceId, message.Id);
+                        await EnqueueAck(handler, message.SourceId, message.TargetId, message.Id);
                     }
                     catch (Exception e) {
                         Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");

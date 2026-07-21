@@ -1,6 +1,10 @@
 using System.Net;
+using System.Text;
+using System.Text.Json;
 
 using Messaging.Client.Protocols;
+using Messaging.Shared;
+using Messaging.Shared.Models;
 
 namespace Messaging.Client;
 
@@ -45,6 +49,14 @@ public class Program {
 
                 case "send":
                     await client.SendTextMessageAsync(parsed[1], parsed[2]);
+                    break;
+
+                case "read":
+                    foreach (MessageWrapper wrapper in await client.DbHandler.GetMessagesAsync(new StringIdentifier(parsed[1]))) {
+                        MessageData? message = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+                        if (message is not null)
+                            Console.WriteLine($"Message ID: {message.Id} sent by: {message.SourceId} at: {message.SentAtUtc}, content: {Encoding.UTF8.GetString(message.Payload)}");
+                    }
                     break;
 
                 default:

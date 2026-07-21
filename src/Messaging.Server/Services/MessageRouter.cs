@@ -2,49 +2,41 @@ using System.Collections.Concurrent;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Messaging.Server.Data;
-using Messaging.Server.Models;
+using Messaging.Shared.Models;
 using Messaging.Shared;
+using Messaging.Shared.Data;
 
 namespace Messaging.Server.Services;
 
-public class MessageRouter {
+public class MessageRouter  {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
     private readonly string dbPath;
 
-    public MessageRouter(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, string dbPath = "messaging.db") {
+    public MessageRouter(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, string dbPath = "messaging_server.db") {
         this.handlers = handlers;
         this.dbPath = dbPath;
+        using (var db = CreateDbContext()) {
+            DbUtil.DeleteDb(db);
+            db.Database.EnsureCreated();
+        }
     }
 
-    private MessagingDbContext CreateDbContext() => new(dbPath);
+    private ServerDbContext CreateDbContext() => new(dbPath);
 
-    private static string GetConversationKey(StringIdentifier userA, StringIdentifier userB) {
-        return string.Compare(userA.Value, userB.Value, StringComparison.Ordinal) < 0
-            ? $"{userA.Value}::{userB.Value}"
-            : $"{userB.Value}::{userA.Value}";
-    }
 
     public async Task RouteMessageAsync(MessageData message) {
-        string conversationKey = GetConversationKey(message.SourceId, message.TargetId);
+        string conversationKey = DbUtil.GetConversationKey(message.SourceId, message.TargetId);
 
         using var db = CreateDbContext();
 
-        // long maxSequenceId = await db.Messages
-        //     .Where(m => m.ConversationKey == conversationKey)
-        //     .Select(m => (long?)m.SequenceId)
-        //     .MaxAsync() ?? 0;
 
-        // long nextSequenceId = maxSequenceId + 1;
-
-
-
-        ServerMessageWrapper wrapper = new() {
+        MessageWrapper wrapper = new() {
             ConversationKey = conversationKey,
             SequenceId = message.Id,
             SenderUsername = message.SourceId.Value,
             ReceiverUsername = message.TargetId.Value,
             SerializedMessageData = JsonSerializer.SerializeToUtf8Bytes(message),
-            StoredAtUtc = DateTimeOffset.UtcNow,
+            StoredAtUtc = DateTime.UtcNow,
             State = MessageState.Waiting
         };
 

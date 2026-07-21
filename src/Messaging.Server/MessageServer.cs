@@ -26,11 +26,8 @@ public class MessageServer {
     public MessageServer(int port, IServerMessageProtocolFactory factory) {
         Port = port;
         listener = new(IPAddress.Any, Port);
-        this.handlers = new();
+        handlers = new();
         
-        using (var db = new MessagingDbContext()) {
-            db.Database.EnsureCreated();
-        }
         router = new MessageRouter(handlers);
         
         protocol = factory.CreateProtocol(0, handlers, router);

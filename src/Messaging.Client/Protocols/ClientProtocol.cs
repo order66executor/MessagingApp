@@ -1,5 +1,8 @@
+using Messaging.Client.Data;
+using Messaging.Client.Services;
 using Messaging.Shared;
 using Messaging.Shared.Protocol;
+using Messaging.Shared.Models;
 
 using System.Text;
 
@@ -7,16 +10,16 @@ namespace Messaging.Client.Protocols;
 
 public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
-    private readonly MessageConnectionHandler handler;
+    private readonly MessageConnectionHandler connHandler;
 
     private readonly StringIdentifier identifier;
 
-    private int idCounter;
+    private readonly ClientDbHandler dbHandler;
 
-    public ClientProtocol(int startingId, StringIdentifier identifier, MessageConnectionHandler handler) {
-        idCounter = startingId;
-        this.handler = handler;
+    public ClientProtocol(StringIdentifier identifier, MessageConnectionHandler connHandler, ClientDbHandler dbHandler) {
+        this.connHandler = connHandler;
         this.identifier = identifier;
+        this.dbHandler = dbHandler;
     }
 
     public sealed override async Task<bool> ProcessAsync(MessageData message) {
@@ -27,7 +30,8 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
             case MessageType.TextMessage:
                 Console.WriteLine($"Message ID: {message.Id} received from: {message.SourceId}, content: {Encoding.UTF8.GetString(message.Payload)}");
-                await EnqueueAck(handler, identifier, new StringIdentifier("SYSTEM"), message.Id);
+                await dbHandler.PlaceMessageAsync(message, MessageState.Sent);
+                await EnqueueAck(connHandler, message.SourceId, message.TargetId, message.Id);
                 return true;
 
             default:
@@ -48,15 +52,20 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
     }
 
-    public MessageData CreateTextMessage(StringIdentifier target, string text) {
-        return new() {
-            Id = idCounter++,
+    public async Task SendTextMessageAsync(StringIdentifier target, string text) {
+        MessageData message = new() {
+            Id = await dbHandler.GetHighestIdAsync(target) + 1,
             Type = MessageType.TextMessage,
             SourceId = identifier,
             TargetId = target,
             SentAtUtc = DateTime.UtcNow,
             Payload = Encoding.UTF8.GetBytes(text)
         };
+        var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Unsent);
+        await connHandler.WriteToOutBufferAsync(message);
+        wrapper.State = MessageState.Waiting;
+        await dbHandler.SaveDbChangesAsync();
+
     }
 
 }

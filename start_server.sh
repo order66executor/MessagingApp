@@ -1,1 +1,1 @@
-dotnet run --project ./src/Messaging.Server/Messaging.Server.csproj -- 5000
+dotnet run --project /home/erik/Documents/Code/MessagingApp/src/Messaging.Server/Messaging.Server.csproj -- 5000

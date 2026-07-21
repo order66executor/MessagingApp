@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Messaging.Shared;
 using Messaging.Client.Protocols;
 using System.Runtime.InteropServices;
+using Messaging.Client.Services;
 
 namespace Messaging.Client;
 
@@ -21,12 +22,16 @@ public class MessageClient {
     private MessageConnectionHandler? handler;
     private readonly string username;
 
+    public ClientDbHandler DbHandler { get; }
+
     public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username) {
         this.address = address;
         this.port = port;
         this.factory = factory;
         client = new(AddressFamily.InterNetwork);
         this.username = username;
+        DbHandler = new();
+
     }
 
     // Connects and introduces to server, then starts listening for incoming and outgoing messages
@@ -53,7 +58,7 @@ public class MessageClient {
         Task connTask = conn.StartAsync();
 
         handler = new(conn, linked.Token);
-        protocol = factory.CreateProtocol(1, selfId, handler);
+        protocol = factory.CreateProtocol(selfId, handler, DbHandler);
 
         // Send intro
 
@@ -117,8 +122,8 @@ public class MessageClient {
 
     // Queue a text message to the outgoing buffer
     public async Task SendTextMessageAsync(string target, string text) {
-        if (handler is null || protocol is null) return;
-        await handler.WriteToOutBufferAsync(protocol.CreateTextMessage(new StringIdentifier(target), text));
+        if (protocol is null) return;
+        await protocol.SendTextMessageAsync(new StringIdentifier(target), text);
     }
 
 }

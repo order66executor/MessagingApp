@@ -1,4 +1,4 @@
-namespace Messaging.Server.Models;
+namespace Messaging.Shared.Models;
 
 public enum MessageState {
     Unsent, // target is offline
