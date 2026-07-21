@@ -4,6 +4,8 @@ using System.Net.Sockets;
 
 using Messaging.Shared;
 using Messaging.Server.Protocols;
+using Messaging.Server.Data;
+using Messaging.Server.Services;
 
 namespace Messaging.Server;
 
@@ -18,12 +20,19 @@ public class MessageServer {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
 
     private readonly ConcurrentDictionary<Guid, Task> tasks;
+    private readonly MessagingDbContext db;
+    private readonly MessageRouter router;
 
     public MessageServer(int port, IServerMessageProtocolFactory factory) {
         Port = port;
         listener = new(IPAddress.Any, Port);
         this.handlers = new();
-        protocol = factory.CreateProtocol(0, handlers);
+        
+        db = new MessagingDbContext();
+        db.Database.EnsureCreated();
+        router = new MessageRouter(handlers, db);
+        
+        protocol = factory.CreateProtocol(0, handlers, router);
         tasks = [ ];
     }
 
@@ -108,6 +117,7 @@ public class MessageServer {
             Console.WriteLine("Replying ack");
             await handler.WriteToOutBufferAsync(protocol.CreateAck(0, new StringIdentifier("SYSTEM"), id, 0));
             Console.WriteLine("Ack added to buffer");
+            await router.DeliverPendingMessagesAsync(id, handler);
             await handler.StartProcessingAsync(protocol);
         }
         finally {

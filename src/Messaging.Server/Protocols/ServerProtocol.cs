@@ -4,6 +4,7 @@ using Messaging.Shared.Protocol;
 using System.Collections.Concurrent;
 using System.Diagnostics.Metrics;
 using System.Text;
+using Messaging.Server.Services;
 
 namespace Messaging.Server.Protocols;
 
@@ -12,9 +13,11 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
 
     private readonly ConcurrentDictionary<StringIdentifier, int> counters;
+    private readonly MessageRouter router;
 
-    public ServerProtocol(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers) {
+    public ServerProtocol(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, MessageRouter router) {
         this.handlers = handlers;
+        this.router = router;
         counters = new();
     }
 
@@ -40,22 +43,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                     Console.WriteLine("Sender disconnected before Ack could be sent");
                 }
 
-                if (handlers.TryGetValue(message.TargetId, out handler)) {
-                    message.Id = counters.AddOrUpdate(message.TargetId, 1, (_, value) => value + 1);
-                    message.SentAtUtc = DateTime.UtcNow;
-
-                    try {
-                        await handler.WriteToOutBufferAsync(message);
-                    }
-                    catch (Exception e) {
-                        Console.WriteLine($"Exception thrown while sending message to recipient: {e.Message}");
-                        return false;
-                    }
-                }
-                else {
-                    Console.WriteLine("Target is not connected, message cannot be sent");
-                    return false;
-                }
+                await router.RouteMessageAsync(message);
                 return true;
             
             default:
