@@ -29,12 +29,13 @@ public class MessageClient {
         this.username = username;
     }
 
+    // Connects and introduces to server, then starts listening for incoming and outgoing messages
     public async Task RunAsync(CancellationToken ct) {
         CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         StringIdentifier selfId = new(username);
 
-
+        // Connect
         try {
             Console.WriteLine("Attempting connection");
             await client.ConnectAsync(address, port);
@@ -48,10 +49,13 @@ public class MessageClient {
         Console.WriteLine("Connection successful");
         conn = new(client, linked.Token);
 
+        // Start the connection's incoming listener
         Task connTask = conn.StartAsync();
 
         handler = new(conn, linked.Token);
         protocol = factory.CreateProtocol(1, selfId, handler);
+
+        // Send intro
 
         try {
             await conn.WriteAsync(protocol.CreateIntroduction());
@@ -60,10 +64,13 @@ public class MessageClient {
             Console.WriteLine("Introduction cancelled");
         }
 
+        //Cancel waiting for ack after 5 seconds
         CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
         introCts.CancelAfter(5000);
 
         bool response = false;
+
+        // wait for ack
         try {
             response = await handler.WaitForIncomingAsync(introCts.Token);
         }
@@ -78,7 +85,10 @@ public class MessageClient {
             return;
         }
         
+        
         bool introduced;
+
+        //Check if message is actually ack
         try {
             introduced = (await handler.ReadOneIncomingAsync(linked.Token)).Type == MessageType.Ack;
         }
@@ -98,12 +108,14 @@ public class MessageClient {
             return;
         }
 
+        // Start listening for incoming and outgoing messages
         await handler.StartProcessingAsync(protocol);
         
 
         await connTask;
     }
 
+    // Queue a text message to the outgoing buffer
     public async Task SendTextMessageAsync(string target, string text) {
         if (handler is null || protocol is null) return;
         await handler.WriteToOutBufferAsync(protocol.CreateTextMessage(new StringIdentifier(target), text));

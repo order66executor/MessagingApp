@@ -3,7 +3,7 @@ namespace Messaging.Shared;
 
 public record MessageData {
 
-    // this ID should be unique for the connection
+    // this ID should be sequential for every message the user sends in a conversation, starts from 1
     public required int Id { get; set; }
     public required MessageType Type { get; set; }
     public required StringIdentifier SourceId { get; set; }

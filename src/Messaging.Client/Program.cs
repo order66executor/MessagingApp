@@ -59,6 +59,7 @@ public class Program {
 
     }
 
+    // Parses input string into split parts. only for now. use [] instead of "" for multi-word messages
     static List<string> ParseString(string str) {
         List<string> ret = [ ];
 
