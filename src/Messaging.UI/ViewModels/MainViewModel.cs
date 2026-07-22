@@ -1,23 +1,26 @@
-using System;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Messaging;
+using Messaging.UI.Messages;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Messaging.UI.ViewModels;
 
-public partial class MainViewModel : ViewModelBase
+public partial class MainViewModel : ViewModelBase, IRecipient<NavigationMessage>
 {
     [ObservableProperty]
     private ViewModelBase _currentViewModel;
 
     public MainViewModel()
     {
-        // By default, start with the Login view
-        // We use the DI container if it's available (it might be null during design time)
-        _currentViewModel = App.Services?.GetService<LoginViewModel>() ?? new LoginViewModel(this);
+        WeakReferenceMessenger.Default.Register(this);
+
+        // Instead of resolving from DI which might cause a loop if LoginViewModel takes MainViewModel,
+        // we can just resolve it safely now because LoginViewModel won't depend on MainViewModel anymore.
+        _currentViewModel = App.Services?.GetService<LoginViewModel>() ?? new LoginViewModel();
     }
 
-    public void NavigateTo(ViewModelBase viewModel)
+    public void Receive(NavigationMessage message)
     {
-        CurrentViewModel = viewModel;
+        CurrentViewModel = message.ViewModel;
     }
 }

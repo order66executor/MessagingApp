@@ -2,14 +2,14 @@ using System;
 using System.Threading.Tasks;
 using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using CommunityToolkit.Mvvm.Messaging;
+using Messaging.UI.Messages;
 using Microsoft.Extensions.DependencyInjection;
 
 namespace Messaging.UI.ViewModels;
 
 public partial class LoginViewModel : ViewModelBase
 {
-    private readonly MainViewModel? _mainViewModel;
-
     [ObservableProperty]
     private string _ipAddress = "127.0.0.1";
 
@@ -25,13 +25,7 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isConnecting = false;
 
-    // Required for design-time instantiation or fallback
     public LoginViewModel() {}
-
-    public LoginViewModel(MainViewModel mainViewModel)
-    {
-        _mainViewModel = mainViewModel;
-    }
 
     [RelayCommand]
     private async Task ConnectAsync()
@@ -53,6 +47,6 @@ public partial class LoginViewModel : ViewModelBase
         
         // Navigate to MainChat
         var chatViewModel = App.Services?.GetService<MainChatViewModel>() ?? new MainChatViewModel();
-        _mainViewModel?.NavigateTo(chatViewModel);
+        WeakReferenceMessenger.Default.Send(new NavigationMessage(chatViewModel));
     }
 }
