@@ -39,8 +39,8 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
         if (_appSession?.Client?.DbHandler == null || string.IsNullOrEmpty(_appSession.CurrentUsername))
             return;
 
-        var userA = new Messaging.Shared.StringIdentifier(_appSession.CurrentUsername);
-        var userB = new Messaging.Shared.StringIdentifier(PartnerUsername);
+        var userA = new Messaging.Shared.Models.StringIdentifier(_appSession.CurrentUsername);
+        var userB = new Messaging.Shared.Models.StringIdentifier(PartnerUsername);
         var convKey = Messaging.Shared.Data.DbUtil.GetConversationKey(userA, userB);
 
         var history = await _appSession.Client.DbHandler.GetMessagesAsync(convKey);
@@ -52,7 +52,7 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
         {
             foreach (var wrapper in history)
             {
-                var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.MessageData>(wrapper.SerializedMessageData);
+                var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.MessageData>(wrapper.SerializedMessageData);
                 if (msgData != null)
                 {
                     string text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
@@ -75,7 +75,7 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
         {
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.MessageData>(message.Wrapper.SerializedMessageData);
+                var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.MessageData>(message.Wrapper.SerializedMessageData);
                 if (msgData != null)
                 {
                     string text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
