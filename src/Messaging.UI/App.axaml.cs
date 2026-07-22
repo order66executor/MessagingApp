@@ -36,9 +36,13 @@ public partial class App : Application
 
     private void ConfigureServices(IServiceCollection services)
     {
+        services.AddSingleton<Messaging.UI.Services.AppSession>();
+
         // ViewModels
         services.AddTransient<MainViewModel>();
         services.AddTransient<LoginViewModel>();
         services.AddTransient<MainChatViewModel>();
+        services.AddTransient<SidebarViewModel>();
+        services.AddTransient<ChatAreaViewModel>();
     }
 }

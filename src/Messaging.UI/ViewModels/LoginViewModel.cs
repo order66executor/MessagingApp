@@ -25,6 +25,14 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isConnecting = false;
 
+    private readonly Messaging.UI.Services.AppSession? _appSession;
+
+    public LoginViewModel(Messaging.UI.Services.AppSession appSession)
+    {
+        _appSession = appSession;
+    }
+
+    // Required for design-time instantiation or fallback
     public LoginViewModel() {}
 
     [RelayCommand]
@@ -36,15 +44,25 @@ public partial class LoginViewModel : ViewModelBase
             return;
         }
 
+        if (!int.TryParse(Port, out int portNum))
+        {
+            ErrorMessage = "Port must be a number.";
+            return;
+        }
+
         IsConnecting = true;
         ErrorMessage = "";
 
-        // TODO: Actual connection logic using MessageClient
-        // For now, simulate a delay and navigate
-        await Task.Delay(1000);
+        bool success = _appSession != null && await _appSession.ConnectAsync(IpAddress, portNum, Username);
 
         IsConnecting = false;
         
+        if (!success)
+        {
+            ErrorMessage = "Failed to connect to the server.";
+            return;
+        }
+
         // Navigate to MainChat
         var chatViewModel = App.Services?.GetService<MainChatViewModel>() ?? new MainChatViewModel();
         WeakReferenceMessenger.Default.Send(new NavigationMessage(chatViewModel));
