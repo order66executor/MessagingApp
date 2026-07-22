@@ -1,6 +1,7 @@
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using CommunityToolkit.Mvvm.Messaging;
 using Messaging.Client;
 using Messaging.Client.Protocols;
 
@@ -22,6 +23,10 @@ public class AppSession
 
         CurrentUsername = username;
         Client = new MessageClient(address, port, new ClientProtocolFactory(), username);
+        Client.DbHandler.OnMessageAdded += (wrapper) => 
+        {
+            WeakReferenceMessenger.Default.Send(new Messages.NewMessageReceivedMessage(wrapper));
+        };
         _cts = new CancellationTokenSource();
 
         // Start connection in the background

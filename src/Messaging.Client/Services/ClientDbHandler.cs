@@ -11,6 +11,8 @@ namespace Messaging.Client.Services;
 public class ClientDbHandler {
     private readonly string dbPath;
 
+    public event Action<MessageWrapper>? OnMessageAdded;
+
     public ClientDbHandler(string dbPath = "messaging_client.db") {
         this.dbPath = dbPath;
         using var db = CreateDbContext();
@@ -38,6 +40,8 @@ public class ClientDbHandler {
         db.Messages.Add(wrapper);
         await db.SaveChangesAsync();
 
+        OnMessageAdded?.Invoke(wrapper);
+
         return wrapper;
     }
 
@@ -64,6 +68,15 @@ public class ClientDbHandler {
             .AsNoTracking()
             .Where(m => m.ConversationKey == conversationKey)
             .OrderBy(m => m.StoredAtUtc)
+            .ToArrayAsync();
+    }
+
+    public async Task<string[]> GetConversationsAsync() {
+        using var db = CreateDbContext();
+        return await db.Messages
+            .AsNoTracking()
+            .Select(m => m.ConversationKey)
+            .Distinct()
             .ToArrayAsync();
     }
 
