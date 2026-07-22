@@ -1,9 +1,8 @@
 using System.Net.Sockets;
 using System.Buffers.Binary;
 using System.Text.Json;
-using System.Reflection.Metadata;
 
-namespace Messaging.Shared;
+namespace Messaging.Shared.Models;
 
 public class MessageConnection {
     private static readonly short sizeByteCount = 4;

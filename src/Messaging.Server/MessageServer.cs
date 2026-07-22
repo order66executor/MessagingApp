@@ -2,7 +2,7 @@ using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 
-using Messaging.Shared;
+using Messaging.Shared.Models;
 using Messaging.Server.Protocols;
 using Messaging.Server.Data;
 using Messaging.Server.Services;

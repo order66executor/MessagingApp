@@ -1,4 +1,5 @@
 using System.Buffers.Binary;
+using Messaging.Shared.Models;
 
 namespace Messaging.Shared.Protocol;
 

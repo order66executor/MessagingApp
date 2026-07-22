@@ -1,7 +1,7 @@
 using System.Net;
 using System.Net.Sockets;
 
-using Messaging.Shared;
+using Messaging.Shared.Models;
 using Messaging.Client.Protocols;
 using System.Runtime.InteropServices;
 using Messaging.Client.Services;

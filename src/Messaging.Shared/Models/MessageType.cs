@@ -1,4 +1,4 @@
-namespace Messaging.Shared;
+namespace Messaging.Shared.Models;
 
 public enum MessageType {
     Introduction,

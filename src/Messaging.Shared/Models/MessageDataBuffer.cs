@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using System.Threading.Channels;
 
-namespace Messaging.Shared;
+namespace Messaging.Shared.Models;
 
 //FIFO type 
 public class MessageDataBuffer : IDisposable {

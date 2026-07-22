@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 
 using Messaging.Server.Protocols;
-using Messaging.Shared;
+using Messaging.Shared.Models;
 namespace Messaging.Server;
 
 public class Program {

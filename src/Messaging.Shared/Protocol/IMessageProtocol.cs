@@ -1,5 +1,5 @@
 using System.Net.Sockets;
-using Messaging.Shared;
+using Messaging.Shared.Models;
 
 namespace Messaging.Shared.Protocol;
 

@@ -1,6 +1,6 @@
 using Messaging.Shared.Protocol;
 
-namespace Messaging.Shared;
+namespace Messaging.Shared.Models;
 
 public class MessageConnectionHandler {
 

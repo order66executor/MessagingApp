@@ -1,5 +1,5 @@
 using Messaging.Client.Services;
-using Messaging.Shared;
+using Messaging.Shared.Models;
 
 namespace Messaging.Client.Protocols;
 

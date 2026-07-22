@@ -1,5 +1,5 @@
-using Messaging.Shared;
-namespace Messaging.Shared;
+using Messaging.Shared.Models;
+namespace Messaging.Shared.Models;
 
 public record MessageData {
 
