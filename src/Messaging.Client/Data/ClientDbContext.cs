@@ -1,4 +1,3 @@
-using Messaging.Shared;
 using Messaging.Shared.Data;
 using Messaging.Shared.Models;
 

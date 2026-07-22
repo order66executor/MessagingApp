@@ -1,6 +1,4 @@
-using Messaging.Client.Data;
 using Messaging.Client.Services;
-using Messaging.Shared;
 using Messaging.Shared.Protocol;
 using Messaging.Shared.Models;
 

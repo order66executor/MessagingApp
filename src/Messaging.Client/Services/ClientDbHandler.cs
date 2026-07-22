@@ -1,12 +1,10 @@
 using System.Text.Json;
 
 using Messaging.Client.Data;
-using Messaging.Shared;
 using Messaging.Shared.Data;
 using Messaging.Shared.Models;
 
 using Microsoft.EntityFrameworkCore;
-using Microsoft.EntityFrameworkCore.ChangeTracking;
 
 namespace Messaging.Client.Services;
 

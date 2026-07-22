@@ -4,9 +4,7 @@ using System.Net.Sockets;
 
 using Messaging.Shared.Models;
 using Messaging.Server.Protocols;
-using Messaging.Server.Data;
 using Messaging.Server.Services;
-using System.Reflection.Metadata;
 
 namespace Messaging.Server;
 

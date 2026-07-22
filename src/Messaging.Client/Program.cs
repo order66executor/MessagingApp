@@ -3,7 +3,6 @@ using System.Text;
 using System.Text.Json;
 
 using Messaging.Client.Protocols;
-using Messaging.Shared;
 using Messaging.Shared.Data;
 using Messaging.Shared.Models;
 

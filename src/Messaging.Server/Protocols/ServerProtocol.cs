@@ -2,7 +2,6 @@ using Messaging.Shared.Models;
 using Messaging.Shared.Protocol;
 
 using System.Collections.Concurrent;
-using System.Diagnostics.Metrics;
 using System.Text;
 using Messaging.Server.Services;
 

@@ -1,5 +1,3 @@
-using System;
-
 namespace Messaging.Shared.Models;
 
 public record MessageWrapper {

@@ -1,4 +1,3 @@
-using Messaging.Shared.Models;
 namespace Messaging.Shared.Models;
 
 public record MessageData {
@@ -8,6 +7,6 @@ public record MessageData {
     public required MessageType Type { get; set; }
     public required StringIdentifier SourceId { get; set; }
     public required StringIdentifier TargetId { get; set; }
-    public required DateTimeOffset SentAtUtc { get; set; }
+    public required DateTime SentAtUtc { get; set; }
     public required byte[] Payload { get; set; }
 }

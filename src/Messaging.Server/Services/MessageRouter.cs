@@ -3,7 +3,6 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Messaging.Server.Data;
 using Messaging.Shared.Models;
-using Messaging.Shared;
 using Messaging.Shared.Data;
 
 namespace Messaging.Server.Services;
