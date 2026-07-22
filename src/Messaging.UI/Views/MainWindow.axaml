@@ -15,8 +15,6 @@
         <vm:MainViewModel />
     </Design.DataContext>
 
-    <TextBox Text="{Binding Greeting}"
-             HorizontalAlignment="Center"
-             VerticalAlignment="Center" />
+    <TransitioningContentControl Content="{Binding CurrentViewModel}" />
 
 </Window>

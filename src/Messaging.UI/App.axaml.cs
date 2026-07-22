@@ -38,7 +38,7 @@ public partial class App : Application
     {
         // ViewModels
         services.AddTransient<MainViewModel>();
-        
-        // We will add LoginViewModel, ChatViewModel, ClientDbHandler, etc. here later
+        services.AddTransient<LoginViewModel>();
+        services.AddTransient<MainChatViewModel>();
     }
 }

@@ -1,0 +1,19 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Messaging.UI.ViewModels"
+             x:Class="Messaging.UI.Views.MainChatView"
+             x:DataType="vm:MainChatViewModel">
+
+    <Grid ColumnDefinitions="300,*" Background="#181825">
+        <!-- Sidebar placeholder -->
+        <Border Grid.Column="0" Background="#1e1e2e" BorderBrush="#313244" BorderThickness="0,0,1,0">
+            <TextBlock Text="Sidebar (Conversations)" Foreground="#cdd6f4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+
+        <!-- Chat Area placeholder -->
+        <Border Grid.Column="1" Background="#181825">
+            <TextBlock Text="{Binding StatusText}" Foreground="#cdd6f4" HorizontalAlignment="Center" VerticalAlignment="Center"/>
+        </Border>
+    </Grid>
+
+</UserControl>

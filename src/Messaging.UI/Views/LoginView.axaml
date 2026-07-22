@@ -1,0 +1,59 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="using:Messaging.UI.ViewModels"
+             x:Class="Messaging.UI.Views.LoginView"
+             x:DataType="vm:LoginViewModel">
+
+    <Grid Background="#1e1e2e">
+        <Border Background="#181825"
+                CornerRadius="12"
+                HorizontalAlignment="Center"
+                VerticalAlignment="Center"
+                Padding="32"
+                BoxShadow="0 8 32 0 #40000000"
+                Width="350">
+            
+            <StackPanel Spacing="16">
+                <TextBlock Text="Welcome" 
+                           FontSize="24" 
+                           FontWeight="Bold" 
+                           Foreground="#cdd6f4" 
+                           HorizontalAlignment="Center" 
+                           Margin="0,0,0,16"/>
+                
+                <TextBox PlaceholderText="Server IP" 
+                         Text="{Binding IpAddress}" 
+                         CornerRadius="6" />
+                
+                <TextBox PlaceholderText="Port" 
+                         Text="{Binding Port}" 
+                         CornerRadius="6" />
+                
+                <TextBox PlaceholderText="Username" 
+                         Text="{Binding Username}" 
+                         CornerRadius="6" />
+                
+                <TextBlock Text="{Binding ErrorMessage}" 
+                           Foreground="#f38ba8" 
+                           IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" 
+                           TextWrapping="Wrap" />
+                
+                <Button Content="Connect" 
+                        Command="{Binding ConnectCommand}" 
+                        HorizontalAlignment="Stretch" 
+                        HorizontalContentAlignment="Center"
+                        Background="#89b4fa" 
+                        Foreground="#11111b" 
+                        CornerRadius="6" 
+                        Margin="0,16,0,0">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                            <Setter Property="Background" Value="#b4befe"/>
+                        </Style>
+                    </Button.Styles>
+                </Button>
+            </StackPanel>
+        </Border>
+    </Grid>
+
+</UserControl>
