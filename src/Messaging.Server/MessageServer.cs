@@ -23,7 +23,7 @@ public class MessageServer {
 
     public MessageServer(int port, IServerMessageProtocolFactory factory) {
         Port = port;
-        listener = new(IPAddress.Any, Port);
+        listener = new(IPAddress.IPv6Any, Port);
         handlers = new();
         
         router = new MessageRouter(handlers);
