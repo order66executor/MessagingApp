@@ -11,7 +11,7 @@ namespace Messaging.UI.ViewModels;
 public partial class LoginViewModel : ViewModelBase
 {
     [ObservableProperty]
-    private string _ipAddress = "127.0.0.1";
+    private string _ipAddress = "::1";
 
     [ObservableProperty]
     private string _port = "8080";
