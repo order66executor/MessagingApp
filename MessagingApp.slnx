@@ -1,5 +1,6 @@
 <Solution>
   <Project Path="src/Messaging.Server/Messaging.Server.csproj" />
+  <Folder Name="/src/" />
   <Folder Name="/src/">
     <Project Path="src/Messaging.UI/Messaging.UI.csproj" />
   </Folder>
