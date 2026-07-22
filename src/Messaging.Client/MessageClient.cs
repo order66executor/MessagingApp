@@ -27,7 +27,7 @@ public class MessageClient {
         this.address = address;
         this.port = port;
         this.factory = factory;
-        client = new(AddressFamily.InterNetwork);
+        client = new(AddressFamily.InterNetworkV6);
         this.username = username;
         DbHandler = new();
 
