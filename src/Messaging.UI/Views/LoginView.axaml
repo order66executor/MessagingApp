@@ -20,7 +20,8 @@
             </Border.BoxShadow>
             
             <StackPanel Spacing="20">
-                <TextBlock Text="Welcome Back" 
+                <!-- Dynamic Header -->
+                <TextBlock Text="{Binding HeaderText}" 
                            FontSize="28" 
                            FontWeight="Bold" 
                            Foreground="#FFFFFF" 
@@ -59,13 +60,25 @@
                          Foreground="#FFFFFF"
                          BorderThickness="0"
                          Padding="12"/>
+
+                <!-- Confirm Password (only visible in Register mode) -->
+                <TextBox PlaceholderText="Confirm Password" 
+                         Text="{Binding ConfirmPassword}" 
+                         PasswordChar="•"
+                         CornerRadius="12"
+                         Background="#2A2D3E"
+                         Foreground="#FFFFFF"
+                         BorderThickness="0"
+                         Padding="12"
+                         IsVisible="{Binding IsRegisterMode}"/>
                 
                 <TextBlock Text="{Binding ErrorMessage}" 
                            Foreground="#f38ba8" 
                            IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" 
                            TextWrapping="Wrap" />
                 
-                <Button Content="Connect" 
+                <!-- Dynamic Action Button -->
+                <Button Content="{Binding ActionButtonText}" 
                         Command="{Binding ConnectCommand}" 
                         HorizontalAlignment="Stretch" 
                         HorizontalContentAlignment="Center"
@@ -74,10 +87,28 @@
                         CornerRadius="12"
                         FontWeight="Bold"
                         Padding="16"
-                        Margin="0,16,0,0">
+                        Margin="0,10,0,0">
                     <Button.Styles>
                         <Style Selector="Button:pointerover /template/ ContentPresenter">
                             <Setter Property="Background" Value="#7b2cbf"/>
+                        </Style>
+                    </Button.Styles>
+                </Button>
+
+                <!-- Toggle Login/Register Link -->
+                <Button Content="{Binding ToggleModeText}"
+                        Command="{Binding ToggleModeCommand}"
+                        HorizontalAlignment="Center"
+                        Background="Transparent"
+                        Foreground="#00f2fe"
+                        FontSize="13"
+                        Padding="0"
+                        BorderThickness="0"
+                        Cursor="Hand">
+                    <Button.Styles>
+                        <Style Selector="Button:pointerover /template/ ContentPresenter">
+                            <Setter Property="Background" Value="Transparent"/>
+                            <Setter Property="Foreground" Value="#FFFFFF"/>
                         </Style>
                     </Button.Styles>
                 </Button>
