@@ -27,6 +27,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
         switch (message.Type) {
             case MessageType.Ack:
                 Console.WriteLine("ACK Received");
+                ackHandler.SubmitAck(message);
                 return true;
 
             case MessageType.TextMessage:
@@ -66,12 +67,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
         var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Waiting);
         bool result = await ackHandler.EnqueueMessage(message);
 
-        if (result) {
-            wrapper.State = MessageState.Sent;
-        }
-        else {
-            wrapper.State = MessageState.Unsent;
-        }
+        wrapper.State = result ? MessageState.Sent : MessageState.Unsent;
         await dbHandler.SaveDbChangesAsync();
     }
 

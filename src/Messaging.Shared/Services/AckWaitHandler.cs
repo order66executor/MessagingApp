@@ -37,7 +37,8 @@ public class AckWaitHandler {
 
     public async Task<bool> EnqueueMessage(MessageData message) {
         if (!pendingBuffers.TryGetValue(message.TargetId, out MessageDataBuffer? buf)) {
-            pendingBuffers.TryAdd(message.TargetId, new());
+            buf = new();
+            pendingBuffers.TryAdd(message.TargetId, buf);
             _ = StartProcessingAsync(message.TargetId);
         }
         if (buf is null) {
@@ -45,7 +46,7 @@ public class AckWaitHandler {
             return false;
         }
 
-        TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>(TaskCreationOptions.RunContinuationsAsynchronously);
+        TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         InProgress.TryAdd(message, tcs);
 
         await buf.Writer.WriteAsync(message, ct);
@@ -81,7 +82,10 @@ public class AckWaitHandler {
                 do {
                     Task<bool> resultTask = tracker.RegisterWait((message.Id, message.TargetId));
                     await handler.WriteToOutBufferAsync(message);
+
                     result = await resultTask;
+                    
+                    if (!result) Console.WriteLine("ack did not arrive");
                 } while (!result && retry && !ct.IsCancellationRequested);
 
                 InProgress.TryGetValue(message, out var tcs);
@@ -111,6 +115,10 @@ public class AckWaitHandler {
 
 
 
+    }
+
+    public void SubmitAck(MessageData message) {
+        tracker.Complete((message.Id, message.TargetId));
     }
 
 
