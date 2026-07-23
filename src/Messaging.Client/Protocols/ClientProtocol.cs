@@ -64,11 +64,12 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
             Payload = Encoding.UTF8.GetBytes(text)
         };
 
-        var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Waiting);
+        var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Pending);
         bool result = await ackHandler.EnqueueMessageAsync(message);
 
-        wrapper.State = result ? MessageState.Sent : MessageState.Unsent;
-        await dbHandler.SaveDbChangesAsync();
+        if (result) Console.WriteLine("Setting message state to sent");
+
+        await dbHandler.UpdateMessageStateAsync(wrapper.Id, result ? MessageState.Sent : MessageState.Unsent);
     }
 
 }

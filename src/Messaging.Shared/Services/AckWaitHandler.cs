@@ -113,7 +113,11 @@ public class AckWaitHandler {
                 
                 do {
                     Task<bool> resultTask = tracker.RegisterWaitAsync((message.Id, useSourceId ? message.SourceId : message.TargetId));
-                    await handler.WriteToOutBufferAsync(message);
+                    try {
+                        await handler.WriteToOutBufferAsync(message);
+                    }
+                    catch (OperationCanceledException) {
+                    }
 
                     result = await resultTask;
                     
@@ -139,6 +143,7 @@ public class AckWaitHandler {
                     Console.WriteLine("Cannot complete ack wait, tcs is null");
                     continue;
                 }
+                Console.WriteLine("Ack waiting results set to false");
                 tcs.TrySetResult(false);
             }
             pendingBuffers.Remove(id, out _);

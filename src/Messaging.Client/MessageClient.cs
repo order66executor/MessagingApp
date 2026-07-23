@@ -5,6 +5,8 @@ using Messaging.Shared.Models;
 using Messaging.Client.Protocols;
 using Messaging.Client.Services;
 using Messaging.Shared.Services;
+using System.Runtime.InteropServices;
+using System.Text.Json;
 
 namespace Messaging.Client;
 
@@ -58,7 +60,7 @@ public class MessageClient {
         // Start the connection's incoming listener
         Task connTask = conn.StartAsync();
 
-        handler = new(conn, linked.Token);
+        handler = new(conn, linked);
         ackHandler = new(handler, true, linked.Token);
         protocol = factory.CreateProtocol(selfId, handler, DbHandler, ackHandler);
 
@@ -116,8 +118,10 @@ public class MessageClient {
         }
 
         // Start listening for incoming and outgoing messages
-        await handler.StartProcessingAsync(protocol);
+        Task handlerTask = handler.StartProcessingAsync(protocol);
+        await SendUnsentMessagesAsync();
 
+        await handlerTask;
         await connTask;
         cts.Cancel();
     }
@@ -126,6 +130,49 @@ public class MessageClient {
     public async Task SendTextMessageAsync(string target, string text) {
         if (protocol is null) return;
         await protocol.SendTextMessageAsync(new StringIdentifier(target), text);
+    }
+
+    private async Task SendUnsentMessagesAsync() {
+        MessageWrapper[] wrappers = await DbHandler.GetMessagesWithStateAsync(MessageState.Unsent);
+
+        List<Task<bool>> sendTasks = [ ];
+        List<MessageWrapper> realPendingMessages = [ ];
+
+        foreach (var wrapper in wrappers) {
+            wrapper.State = MessageState.Pending;
+
+            try {
+                MessageData? messageData = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+                if (messageData is not null && ackHandler is not null) {
+                    sendTasks.Add(ackHandler.EnqueueMessageAsync(messageData));
+                    Console.WriteLine("Pending message enqueued");
+                    realPendingMessages.Add(wrapper);
+                }
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Error delivering pending message to: {e.Message}");
+            }
+        }
+
+        bool[] results = await Task.WhenAll(sendTasks);
+        int success = 0, failure = 0;
+
+        for (int i = 0; i < sendTasks.Count; ++i) {
+            if (results[i]) {
+                ++success;
+            }
+            else {
+                ++failure;
+            }
+            await DbHandler.UpdateMessageStateAsync(realPendingMessages[i].Id, results[i] ? MessageState.Sent : MessageState.Unsent);
+        }
+
+        if (realPendingMessages.Count > 0) {
+            Console.WriteLine($"Delivered {success} pending messages, failed {failure}");
+        }
+        
+
+
     }
 
 }

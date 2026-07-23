@@ -11,9 +11,9 @@ public class MessageConnectionHandler {
     private readonly CancellationTokenSource ct;
 
 
-    public MessageConnectionHandler(MessageConnection conn, CancellationToken ct) {
+    public MessageConnectionHandler(MessageConnection conn, CancellationTokenSource cts) {
         this.conn = conn;
-        this.ct = CancellationTokenSource.CreateLinkedTokenSource(ct);
+        ct = cts;
         outBuffer = new();
     }
 

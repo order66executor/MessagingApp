@@ -97,7 +97,7 @@ public class MessageServer {
         //Handle introduction
 
         bool introduced;
-        MessageConnectionHandler handler = new(conn, linked.Token);
+        MessageConnectionHandler handler = new(conn, linked);
 
         try {
             await handler.WaitForIncomingAsync(introCts.Token);

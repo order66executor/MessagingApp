@@ -16,8 +16,12 @@ public class ClientDbHandler {
     public ClientDbHandler(string dbPath = "messaging_client.db") {
         this.dbPath = dbPath;
         using var db = CreateDbContext();
-        DbUtil.DeleteDb(db);
+        // DbUtil.DeleteDb(db);
         db.Database.EnsureCreated();
+
+        db.Messages
+            .Where(m => m.State == MessageState.Pending)
+            .ExecuteUpdate(m => m.SetProperty(x => x.State, MessageState.Unsent));
     }
 
 
@@ -50,9 +54,13 @@ public class ClientDbHandler {
         return wrapper;
     }
 
-    public async Task SaveDbChangesAsync() {
+
+    public async Task UpdateMessageStateAsync(long id, MessageState state) {
         using var db = CreateDbContext();
-        await db.SaveChangesAsync();
+        await db.Messages
+            .Where(e => e.Id == id)
+            .ExecuteUpdateAsync(e => e.SetProperty(x => x.State, state));
+
     }
 
 
@@ -74,6 +82,16 @@ public class ClientDbHandler {
             .Where(m => m.ConversationKey == conversationKey)
             .OrderBy(m => m.StoredAtUtc)
             .ToArrayAsync();
+    }
+
+    public async Task<MessageWrapper[]> GetMessagesWithStateAsync(MessageState state) {
+        using var db = CreateDbContext();
+
+        return await db.Messages
+            .Where(m => m.State == state)
+            .OrderBy(m => m.SequenceId)
+            .ToArrayAsync();
+
     }
 
     public async Task<string[]> GetConversationsAsync() {
