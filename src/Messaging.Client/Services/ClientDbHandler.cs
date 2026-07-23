@@ -37,10 +37,15 @@ public class ClientDbHandler {
         };
 
 
-        db.Messages.Add(wrapper);
-        await db.SaveChangesAsync();
+        try {
+            db.Messages.Add(wrapper);
+            await db.SaveChangesAsync();
 
-        OnMessageAdded?.Invoke(wrapper);
+            OnMessageAdded?.Invoke(wrapper);
+        }
+        catch (DbUpdateException) {
+            Console.WriteLine("Message is a duplicate");
+        }
 
         return wrapper;
     }
