@@ -23,6 +23,14 @@ public partial class ChatMessageViewModel : ViewModelBase
     public string BackgroundColor => IsOwnMessage ? "#6610f2" : "#2A2D3E";
     public string CornerRadius => IsOwnMessage ? "16,16,0,16" : "16,16,16,0";
 
+    // Fix #7: Notify UI when IsOwnMessage changes so computed properties update
+    partial void OnIsOwnMessageChanged(bool value)
+    {
+        OnPropertyChanged(nameof(Alignment));
+        OnPropertyChanged(nameof(BackgroundColor));
+        OnPropertyChanged(nameof(CornerRadius));
+    }
+
     // For later: Attachment info
     [ObservableProperty]
     private bool _hasAttachment;

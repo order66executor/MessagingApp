@@ -35,7 +35,7 @@ public partial class SidebarViewModel : ViewModelBase, IRecipient<NewMessageRece
     public SidebarViewModel(Messaging.UI.Services.AppSession appSession)
     {
         _appSession = appSession;
-        WeakReferenceMessenger.Default.Register(this);
+        WeakReferenceMessenger.Default.RegisterAll(this);
         _ = LoadConversationsAsync();
     }
 

@@ -4,9 +4,9 @@
              x:Class="Messaging.UI.Views.MainChatView"
              x:DataType="vm:MainChatViewModel">
 
-    <Grid ColumnDefinitions="300,*" Background="#181825">
+    <Grid ColumnDefinitions="300,*" Background="#0B0D17">
         <!-- Sidebar -->
-        <Border Grid.Column="0" BorderBrush="#313244" BorderThickness="0,0,1,0">
+        <Border Grid.Column="0" BorderBrush="#2A2D3E" BorderThickness="0,0,1,0">
             <ContentControl Content="{Binding Sidebar}" />
         </Border>
 

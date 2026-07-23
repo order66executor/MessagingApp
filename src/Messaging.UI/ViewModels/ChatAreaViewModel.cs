@@ -16,9 +16,6 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
     private string? _partnerUsername;
 
     [ObservableProperty]
-    private string _newMessageText = "";
-
-    [ObservableProperty]
     private ObservableCollection<ChatMessageViewModel> _messages = new();
 
     [ObservableProperty]
@@ -112,6 +109,7 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
         string text = MessageInput.Trim();
         MessageInput = "";
 
+        // TODO: Pass password to backend in auth phase
         // Send to network
         await _appSession.Client.SendTextMessageAsync(PartnerUsername, text);
     }

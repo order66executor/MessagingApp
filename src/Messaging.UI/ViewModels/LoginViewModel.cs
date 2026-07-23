@@ -56,6 +56,7 @@ public partial class LoginViewModel : ViewModelBase
         IsConnecting = true;
         ErrorMessage = "";
 
+        // TODO: Pass Password to ConnectAsync when backend auth is implemented
         bool success = _appSession != null && await _appSession.ConnectAsync(IpAddress, portNum, Username);
 
         IsConnecting = false;
