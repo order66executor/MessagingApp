@@ -16,7 +16,10 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
     private string? _partnerUsername;
 
     [ObservableProperty]
-    private ObservableCollection<string> _messages = new();
+    private string _newMessageText = "";
+
+    [ObservableProperty]
+    private ObservableCollection<ChatMessageViewModel> _messages = new();
 
     [ObservableProperty]
     private string _messageInput = "";
@@ -56,8 +59,15 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
                 if (msgData != null)
                 {
                     string text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
-                    string prefix = wrapper.SenderUsername == _appSession.CurrentUsername ? "Me" : wrapper.SenderUsername;
-                    Messages.Add($"{prefix}: {text}");
+                    bool isOwn = wrapper.SenderUsername == _appSession.CurrentUsername;
+                    
+                    Messages.Add(new ChatMessageViewModel
+                    {
+                        Text = text,
+                        IsOwnMessage = isOwn,
+                        Timestamp = msgData.SentAtUtc.ToLocalTime(),
+                        State = wrapper.State
+                    });
                 }
             }
         });
@@ -79,8 +89,15 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
                 if (msgData != null)
                 {
                     string text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
-                    string prefix = message.Wrapper.SenderUsername == _appSession.CurrentUsername ? "Me" : message.Wrapper.SenderUsername;
-                    Messages.Add($"{prefix}: {text}");
+                    bool isOwn = message.Wrapper.SenderUsername == _appSession.CurrentUsername;
+                    
+                    Messages.Add(new ChatMessageViewModel
+                    {
+                        Text = text,
+                        IsOwnMessage = isOwn,
+                        Timestamp = msgData.SentAtUtc.ToLocalTime(),
+                        State = message.Wrapper.State
+                    });
                 }
             });
         }

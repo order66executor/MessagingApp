@@ -4,34 +4,61 @@
              x:Class="Messaging.UI.Views.LoginView"
              x:DataType="vm:LoginViewModel">
 
-    <Grid Background="#1e1e2e">
-        <Border Background="#181825"
-                CornerRadius="12"
-                HorizontalAlignment="Center"
+    <Grid Background="#0B0D17">
+        
+        <Border HorizontalAlignment="Center"
                 VerticalAlignment="Center"
-                Padding="32"
-                BoxShadow="0 8 32 0 #40000000"
-                Width="350">
+                Padding="40"
+                CornerRadius="24"
+                Width="400">
+            <!-- Glassmorphism Effect -->
+            <Border.Background>
+                <SolidColorBrush Color="#1E2030" Opacity="0.8" />
+            </Border.Background>
+            <Border.BoxShadow>
+                <BoxShadows>0 10 40 0 #50000000</BoxShadows>
+            </Border.BoxShadow>
             
-            <StackPanel Spacing="16">
-                <TextBlock Text="Welcome" 
-                           FontSize="24" 
+            <StackPanel Spacing="20">
+                <TextBlock Text="Welcome Back" 
+                           FontSize="28" 
                            FontWeight="Bold" 
-                           Foreground="#cdd6f4" 
+                           Foreground="#FFFFFF" 
                            HorizontalAlignment="Center" 
-                           Margin="0,0,0,16"/>
+                           Margin="0,0,0,10"/>
                 
                 <TextBox PlaceholderText="Server IP" 
                          Text="{Binding IpAddress}" 
-                         CornerRadius="6" />
+                         CornerRadius="12"
+                         Background="#2A2D3E"
+                         Foreground="#FFFFFF"
+                         BorderThickness="0"
+                         Padding="12"/>
                 
                 <TextBox PlaceholderText="Port" 
                          Text="{Binding Port}" 
-                         CornerRadius="6" />
+                         CornerRadius="12"
+                         Background="#2A2D3E"
+                         Foreground="#FFFFFF"
+                         BorderThickness="0"
+                         Padding="12"/>
                 
                 <TextBox PlaceholderText="Username" 
                          Text="{Binding Username}" 
-                         CornerRadius="6" />
+                         CornerRadius="12"
+                         Background="#2A2D3E"
+                         Foreground="#FFFFFF"
+                         BorderThickness="0"
+                         Padding="12"/>
+                         
+                <TextBox PlaceholderText="Password" 
+                         Text="{Binding Password}" 
+                         PasswordChar="•"
+                         CornerRadius="12"
+                         Background="#2A2D3E"
+                         Foreground="#FFFFFF"
+                         BorderThickness="0"
+                         Padding="12"/>
                 
                 <TextBlock Text="{Binding ErrorMessage}" 
                            Foreground="#f38ba8" 
@@ -42,13 +69,15 @@
                         Command="{Binding ConnectCommand}" 
                         HorizontalAlignment="Stretch" 
                         HorizontalContentAlignment="Center"
-                        Background="#89b4fa" 
-                        Foreground="#11111b" 
-                        CornerRadius="6" 
+                        Background="#6610f2" 
+                        Foreground="#FFFFFF" 
+                        CornerRadius="12"
+                        FontWeight="Bold"
+                        Padding="16"
                         Margin="0,16,0,0">
                     <Button.Styles>
                         <Style Selector="Button:pointerover /template/ ContentPresenter">
-                            <Setter Property="Background" Value="#b4befe"/>
+                            <Setter Property="Background" Value="#7b2cbf"/>
                         </Style>
                     </Button.Styles>
                 </Button>

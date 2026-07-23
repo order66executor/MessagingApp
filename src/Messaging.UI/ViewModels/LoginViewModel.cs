@@ -20,6 +20,9 @@ public partial class LoginViewModel : ViewModelBase
     private string _username = "";
 
     [ObservableProperty]
+    private string _password = "";
+
+    [ObservableProperty]
     private string _errorMessage = "";
 
     [ObservableProperty]
@@ -38,9 +41,9 @@ public partial class LoginViewModel : ViewModelBase
     [RelayCommand]
     private async Task ConnectAsync()
     {
-        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(IpAddress) || string.IsNullOrWhiteSpace(Port))
+        if (string.IsNullOrWhiteSpace(Username) || string.IsNullOrWhiteSpace(Password) || string.IsNullOrWhiteSpace(IpAddress) || string.IsNullOrWhiteSpace(Port))
         {
-            ErrorMessage = "Please fill in all fields.";
+            ErrorMessage = "Please fill in all fields (including password).";
             return;
         }
 
