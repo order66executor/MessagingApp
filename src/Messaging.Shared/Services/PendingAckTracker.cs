@@ -5,7 +5,7 @@ using Messaging.Shared.Models;
 namespace Messaging.Shared.Services;
 
 public class PendingAckTracker {
-    private readonly ConcurrentDictionary<(int, StringIdentifier), TaskCompletionSource<bool>> pendingMessages;
+    private readonly ConcurrentDictionary<(long Id, StringIdentifier Target), TaskCompletionSource<bool>> pendingMessages;
     private readonly CancellationToken ct;
 
     private static readonly TimeSpan waitLength = TimeSpan.FromSeconds(5);
@@ -16,7 +16,7 @@ public class PendingAckTracker {
     }
 
     //waits for waitLength for someone to call complete on the key
-    public async Task<bool> RegisterWait((int Id, StringIdentifier Target) key) {
+    public async Task<bool> RegisterWait((long Id, StringIdentifier Target) key) {
         // create tcs to complete
         TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         pendingMessages.TryAdd(key, tcs);
@@ -28,11 +28,11 @@ public class PendingAckTracker {
         pendingMessages.TryRemove(key, out _);
 
         //return if task completed or timed out
-        return tcs.Task.Result;
+        return await tcs.Task;
     }
 
     //complete waiting for key
-    public void Complete((int Id, StringIdentifier Target) key) {
+    public void Complete((long Id, StringIdentifier Target) key) {
         if(!pendingMessages.TryGetValue(key, out var result))
             Console.WriteLine("Ack wait cannot be completed, no such dict entry");
         

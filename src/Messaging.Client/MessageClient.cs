@@ -4,6 +4,7 @@ using System.Net.Sockets;
 using Messaging.Shared.Models;
 using Messaging.Client.Protocols;
 using Messaging.Client.Services;
+using Messaging.Shared.Services;
 
 namespace Messaging.Client;
 
@@ -22,6 +23,7 @@ public class MessageClient {
     private readonly string username;
 
     public ClientDbHandler DbHandler { get; }
+    private AckWaitHandler? ackHandler;
 
     public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username) {
         this.address = address;
@@ -30,7 +32,6 @@ public class MessageClient {
         client = new(AddressFamily.InterNetworkV6);
         this.username = username;
         DbHandler = new();
-
     }
 
     // Connects and introduces to server, then starts listening for incoming and outgoing messages
@@ -58,7 +59,8 @@ public class MessageClient {
         Task connTask = conn.StartAsync();
 
         handler = new(conn, linked.Token);
-        protocol = factory.CreateProtocol(selfId, handler, DbHandler);
+        ackHandler = new(handler, true, linked.Token);
+        protocol = factory.CreateProtocol(selfId, handler, DbHandler, ackHandler);
 
         // Send intro
 

@@ -1,6 +1,6 @@
 namespace Messaging.Shared.Models;
 
-public record MessageData {
+public class MessageData {
 
     // this ID should be sequential for every message the user sends in a conversation, starts from 1
     public required long Id { get; set; }

@@ -3,6 +3,7 @@ using Messaging.Shared.Protocol;
 using Messaging.Shared.Models;
 
 using System.Text;
+using Messaging.Shared.Services;
 
 namespace Messaging.Client.Protocols;
 
@@ -13,11 +14,13 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
     private readonly StringIdentifier identifier;
 
     private readonly ClientDbHandler dbHandler;
+    private readonly AckWaitHandler ackHandler;
 
-    public ClientProtocol(StringIdentifier identifier, MessageConnectionHandler connHandler, ClientDbHandler dbHandler) {
+    public ClientProtocol(StringIdentifier identifier, MessageConnectionHandler connHandler, ClientDbHandler dbHandler, AckWaitHandler ackWaitHandler) {
         this.connHandler = connHandler;
         this.identifier = identifier;
         this.dbHandler = dbHandler;
+        ackHandler = ackWaitHandler;
     }
 
     public sealed override async Task<bool> ProcessAsync(MessageData message) {
@@ -59,11 +62,17 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
             SentAtUtc = DateTime.UtcNow,
             Payload = Encoding.UTF8.GetBytes(text)
         };
-        var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Unsent);
-        await connHandler.WriteToOutBufferAsync(message);
-        wrapper.State = MessageState.Waiting;
-        await dbHandler.SaveDbChangesAsync();
 
+        var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Waiting);
+        bool result = await ackHandler.EnqueueMessage(message);
+
+        if (result) {
+            wrapper.State = MessageState.Sent;
+        }
+        else {
+            wrapper.State = MessageState.Unsent;
+        }
+        await dbHandler.SaveDbChangesAsync();
     }
 
 }
