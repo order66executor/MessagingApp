@@ -15,8 +15,8 @@ public class ClientDbContext : DbContextBase {
         modelBuilder.Entity<MessageWrapper>(entity => {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new {e.ReceiverUsername, e.SequenceId});
-            entity.HasIndex(e => e.SequenceId);
-            entity.HasIndex(e => e.State);
+            entity.HasIndex(e => new { e.ConversationKey, e.SenderUsername, e.SequenceId }).IsUnique();
+            entity.HasIndex(e => new { e.State, e.SequenceId });
             entity.HasIndex(e => new {e.ConversationKey, e.StoredAtUtc}); // for looking up conversations
         });
     }

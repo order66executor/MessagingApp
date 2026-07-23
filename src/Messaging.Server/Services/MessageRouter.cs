@@ -11,6 +11,7 @@ namespace Messaging.Server.Services;
 public class MessageRouter  {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
     private readonly string dbPath;
+    private static readonly TimeSpan sweepInterval = TimeSpan.FromSeconds(3);
     public AckWaitHandler AckHandler { get; }
 
     public MessageRouter(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, AckWaitHandler ackHandler, string dbPath = "messaging_server.db") {
@@ -50,6 +51,39 @@ public class MessageRouter  {
         Console.WriteLine("Updating hightest ack");
         await db.SaveChangesAsync();
         return true;
+    }
+
+    private async Task SendWrapperAsync(MessageWrapper wrapper, ServerDbContext db) {
+        MessageData? message = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+        if (message is null) {
+            Console.WriteLine("Message data was null when attempting to send during sweep");
+            return;
+        }
+        if (handlers.TryGetValue(message.TargetId, out MessageConnectionHandler? targetHandler)) {
+            try {
+                bool result = await AckHandler.EnqueueMessageAsync(message);
+                
+                if (result) {
+                    db.Messages.Remove(wrapper);
+                }
+
+                else wrapper.State = MessageState.Unsent;
+                await db.SaveChangesAsync();
+
+                if (result) Console.WriteLine($"Message routed to {message.TargetId.Value}");
+                else Console.WriteLine("no ack received");
+        
+            }
+            catch (Exception e) {
+                Console.WriteLine($"Failed to write to out buffer for {message.TargetId.Value}: {e.Message}");
+            }
+        }
+        else {
+            wrapper.State = MessageState.Unsent;
+            await db.SaveChangesAsync();
+            Console.WriteLine($"User {message.TargetId.Value} offline, message stored in DB");
+        }
+
     }
 
 
@@ -155,4 +189,41 @@ public class MessageRouter  {
             Console.WriteLine($"Delivered {success} pending messages to {userId.Value}, failed {failure}");
         }
     }
+
+    public async Task StartUnsentSweepAsync(CancellationToken ct) {
+        while (!ct.IsCancellationRequested) {
+            Console.WriteLine("Sweeping...");
+            using var db = CreateDbContext();
+
+            var onlineUsers = handlers.Keys.Select(x => x.Value).ToArray();
+            try {
+
+                await db.Messages
+                    .Where(m => m.State == MessageState.Unsent && onlineUsers.Contains(m.ReceiverUsername))
+                    .ExecuteUpdateAsync(m => m.SetProperty(x => x.State, MessageState.AutoPending), ct);
+                
+                MessageWrapper[] unsent = await db.Messages
+                    .Where(m => m.State == MessageState.AutoPending)
+                    .OrderBy(m => m.SequenceId)
+                    .ToArrayAsync(ct);
+
+                foreach (MessageWrapper wrapper in unsent) {
+                    await SendWrapperAsync(wrapper, db);
+                }
+
+                await Task.Delay(sweepInterval, ct);
+            }
+            catch (TaskCanceledException) {
+                Console.WriteLine("Sweep canceled");
+            }
+            catch (OperationCanceledException) {
+                Console.WriteLine("Sweep canceled");
+
+            }
+        }
+
+
+    }
+
+
 }

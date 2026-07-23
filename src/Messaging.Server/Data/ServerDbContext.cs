@@ -18,6 +18,7 @@ public class ServerDbContext : DbContextBase {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new { e.ReceiverUsername, e.State }); // fast lookup for offline delivery
             entity.HasIndex(e => new { e.ConversationKey, e.SequenceId, e.SenderUsername }).IsUnique(); // enforce uniqueness
+            entity.HasIndex(e => new { e.State, e.SequenceId });
         });
 
         modelBuilder.Entity<DbAckCounter>(entity => {

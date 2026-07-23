@@ -40,6 +40,7 @@ public class MessageServer {
     public async Task RunAsync() {
         listener.Start();
         Console.WriteLine("Listen started");
+        Task sweepTask = router.StartUnsentSweepAsync(ct);
 
         while (!ct.IsCancellationRequested) {
             TcpClient client;
@@ -63,6 +64,7 @@ public class MessageServer {
         listener.Dispose();
 
         foreach (Task task in tasks.Values.ToArray()) await task;
+        await sweepTask;
 
     }
 
@@ -126,6 +128,7 @@ public class MessageServer {
         // add id-handler pair to active connections
         handlers.TryAdd(id, handler);
         Task handlerTask;
+
         try {
             Console.WriteLine("Replying ack");
             await handler.WriteToOutBufferAsync(protocol.CreateAck(new StringIdentifier("SYSTEM"), id, 0));
