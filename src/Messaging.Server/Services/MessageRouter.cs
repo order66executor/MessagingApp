@@ -47,7 +47,7 @@ public class MessageRouter  {
                 existing.HighestAck = message.Id;
             else return false;
         }
-
+        Console.WriteLine("Updating hightest ack");
         await db.SaveChangesAsync();
         return true;
     }
@@ -116,6 +116,8 @@ public class MessageRouter  {
             .OrderBy(m => m.SequenceId)
             .ToListAsync();
 
+        Console.WriteLine("Messages claimed");
+
         List<Task<bool>> sendTasks = [ ];
 
         var realPendingMessages = new List<MessageWrapper>();
@@ -125,6 +127,7 @@ public class MessageRouter  {
                 MessageData? messageData = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
                 if (messageData != null) {
                     sendTasks.Add(AckHandler.EnqueueMessageAsync(messageData));
+                    Console.WriteLine("Pending message enqueued");
                     realPendingMessages.Add(wrapper);
                 }
             }
@@ -134,15 +137,22 @@ public class MessageRouter  {
         }
 
         bool[] results = await Task.WhenAll(sendTasks);
+        int success = 0, failure = 0;
 
         for (int i = 0; i < sendTasks.Count; ++i) {
-            if (results[i]) db.Messages.Remove(realPendingMessages[i]);
-            else realPendingMessages[i].State = MessageState.Unsent;
+            if (results[i]) {
+                ++success;
+                db.Messages.Remove(realPendingMessages[i]);
+            }
+            else {
+                realPendingMessages[i].State = MessageState.Unsent;
+                ++failure;
+            }
         }
 
         if (realPendingMessages.Count > 0) {
             await db.SaveChangesAsync();
-            Console.WriteLine($"Delivered {pendingMessages.Count} pending messages to {userId.Value}");
+            Console.WriteLine($"Delivered {success} pending messages to {userId.Value}, failed {failure}");
         }
     }
 }

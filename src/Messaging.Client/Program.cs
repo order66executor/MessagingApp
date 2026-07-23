@@ -53,7 +53,7 @@ public class Program {
                     break;
 
                 case "send":
-                    await client.SendTextMessageAsync(parsed[1], parsed[2]);
+                    _ = client.SendTextMessageAsync(parsed[1], parsed[2]);
                     break;
 
                 case "read":

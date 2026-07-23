@@ -33,7 +33,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 Console.WriteLine($"Text message with ID: {message.Id} received from: {message.SourceId} to: {message.TargetId} sent at: {message.SentAtUtc} content: {Encoding.UTF8.GetString(message.Payload)}");
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler)) {
                     try {
-                        await EnqueueAck(handler, message.SourceId, message.TargetId, message.Id);
+                        // await EnqueueAck(handler, message.SourceId, message.TargetId, message.Id);
 
                     }
                     catch (Exception e) {
@@ -47,7 +47,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 result = await router.UpdateHighestAckAsync(message);
 
                 if (result)
-                    await router.RouteMessageAsync(message);
+                    _ = router.RouteMessageAsync(message);
                 else Console.WriteLine("Message already acked, discarding");
                 return true;
             

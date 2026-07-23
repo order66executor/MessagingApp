@@ -6,7 +6,6 @@ using Messaging.Shared.Models;
 using Messaging.Server.Protocols;
 using Messaging.Server.Services;
 
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 namespace Messaging.Server;
 
@@ -35,6 +34,7 @@ public class MessageServer {
         
         protocol = factory.CreateProtocol(0, handlers, router);
         tasks = [ ];
+        this.ct = ct;
     }
 
     public async Task RunAsync() {
@@ -125,14 +125,17 @@ public class MessageServer {
 
         // add id-handler pair to active connections
         handlers.TryAdd(id, handler);
+        Task handlerTask;
         try {
             Console.WriteLine("Replying ack");
             await handler.WriteToOutBufferAsync(protocol.CreateAck(new StringIdentifier("SYSTEM"), id, 0));
             Console.WriteLine("Ack added to buffer");
+            // start listening for incoming and outgoing
+            handlerTask = handler.StartProcessingAsync(protocol);
             // deliver pending messages
             await router.DeliverPendingMessagesAsync(id, handler);
-            // start listening for incoming and outgoing
-            await handler.StartProcessingAsync(protocol);
+            // process messages until shutdown
+            await handlerTask;
         }
         finally {
             handlers.TryRemove(id, out _);

@@ -57,10 +57,20 @@ public class AckWaitHandler {
         MessageDataBuffer? buf;
 
         lock (syncRoot) {
-            if (!pendingBuffers.TryGetValue(message.TargetId, out buf)) {
+            if (!pendingBuffers.TryGetValue(message.TargetId, out buf) && !hasOnlyOneHandler) {
                 buf = new();
                 pendingBuffers[message.TargetId] = buf;
+                Console.WriteLine("new buffer created, ack processing started");
                 _ = StartProcessingAsync(message.TargetId, ct);
+            }
+            else if (hasOnlyOneHandler) {
+                if (pendingBuffers.IsEmpty) {
+                    StringIdentifier id = new("");
+                    pendingBuffers[id] = new();
+                    Console.WriteLine("Single buffer created");
+                    _ = StartProcessingAsync(id, ct);
+                }
+                buf = pendingBuffers.First().Value;
             }
         }
         if (buf is null) {
