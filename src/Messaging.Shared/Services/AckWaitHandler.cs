@@ -9,37 +9,59 @@ namespace Messaging.Shared.Services;
 public class AckWaitHandler {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
     private readonly CancellationToken ct;
+    private readonly ConcurrentDictionary<StringIdentifier, CancellationToken> tokens;
     private readonly bool retry;
     private readonly bool hasOnlyOneHandler;
     private readonly ConcurrentDictionary<StringIdentifier, MessageDataBuffer> pendingBuffers;
     private readonly PendingAckTracker tracker;
     private MessageConnectionHandler Handler => handlers.Values.First();
     public ConcurrentDictionary<MessageData, TaskCompletionSource<bool>> InProgress { get; }
+    private readonly Lock syncRoot = new();
+    private readonly bool useSourceId = false;
 
     public AckWaitHandler(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers,
-        bool retry, CancellationToken ct) {
+        bool retry, ConcurrentDictionary<StringIdentifier, CancellationToken> tokens, CancellationToken ct) {
 
-        this.handlers = handlers;
         this.ct = ct;
+        this.handlers = handlers;
         this.retry = retry;
         hasOnlyOneHandler = false;
         pendingBuffers = new();
         InProgress = [ ];
+        this.tokens = tokens;
+        tracker = new(ct);
+        useSourceId = true;
+    }
+
+    public AckWaitHandler(MessageConnectionHandler handler, bool retry, CancellationToken ct) {
+        handlers = [ ];
+        tokens = [ ];
+        InProgress = [ ];
+        this.retry = retry;
+        pendingBuffers = new();
+        this.ct = ct;
+
+        handlers.TryAdd(new StringIdentifier(""), handler);
+        tokens.TryAdd(new StringIdentifier(""), ct);
+        hasOnlyOneHandler = true;
         tracker = new(ct);
     }
 
-    public AckWaitHandler(MessageConnectionHandler handler, bool retry, CancellationToken ct) : this(handlers: new(), retry, ct) {
-        handlers.TryAdd(new StringIdentifier(""), handler);
-        hasOnlyOneHandler = true;
-    }
 
 
+    public async Task<bool> EnqueueMessageAsync(MessageData message) {
+        CancellationToken ct;
+        if (hasOnlyOneHandler) ct = this.ct;
+        else tokens.TryGetValue(message.TargetId, out ct);
 
-    public async Task<bool> EnqueueMessage(MessageData message) {
-        if (!pendingBuffers.TryGetValue(message.TargetId, out MessageDataBuffer? buf)) {
-            buf = new();
-            pendingBuffers.TryAdd(message.TargetId, buf);
-            _ = StartProcessingAsync(message.TargetId);
+        MessageDataBuffer? buf;
+
+        lock (syncRoot) {
+            if (!pendingBuffers.TryGetValue(message.TargetId, out buf)) {
+                buf = new();
+                pendingBuffers[message.TargetId] = buf;
+                _ = StartProcessingAsync(message.TargetId, ct);
+            }
         }
         if (buf is null) {
             Console.WriteLine("Buf is null in enqueueMessage");
@@ -57,7 +79,7 @@ public class AckWaitHandler {
 
     }
 
-    public async Task StartProcessingAsync(StringIdentifier id) {
+    public async Task StartProcessingAsync(StringIdentifier id, CancellationToken ct) {
 
         MessageConnectionHandler? handler;
 
@@ -80,7 +102,7 @@ public class AckWaitHandler {
                 bool result;
                 
                 do {
-                    Task<bool> resultTask = tracker.RegisterWait((message.Id, message.TargetId));
+                    Task<bool> resultTask = tracker.RegisterWaitAsync((message.Id, useSourceId ? message.SourceId : message.TargetId));
                     await handler.WriteToOutBufferAsync(message);
 
                     result = await resultTask;
@@ -118,7 +140,7 @@ public class AckWaitHandler {
     }
 
     public void SubmitAck(MessageData message) {
-        tracker.Complete((message.Id, message.TargetId));
+        tracker.Complete((message.Id, useSourceId ? message.SourceId : message.TargetId));
     }
 
 

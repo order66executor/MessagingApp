@@ -6,6 +6,8 @@ using Messaging.Shared.Models;
 using Messaging.Server.Protocols;
 using Messaging.Server.Services;
 
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
+
 namespace Messaging.Server;
 
 public class MessageServer {
@@ -20,19 +22,22 @@ public class MessageServer {
 
     private readonly ConcurrentDictionary<Guid, Task> tasks;
     private readonly MessageRouter router;
+    private readonly ConcurrentDictionary<StringIdentifier, CancellationToken> tokens;
+    private readonly CancellationToken ct;
 
-    public MessageServer(int port, IServerMessageProtocolFactory factory) {
+    public MessageServer(int port, IServerMessageProtocolFactory factory, CancellationToken ct) {
         Port = port;
         listener = new(IPAddress.IPv6Any, Port);
         handlers = new();
+        tokens = new();
         
-        router = new MessageRouter(handlers);
+        router = new MessageRouter(handlers, new(handlers, false, tokens, ct));
         
         protocol = factory.CreateProtocol(0, handlers, router);
         tasks = [ ];
     }
 
-    public async Task RunAsync(CancellationToken ct) {
+    public async Task RunAsync() {
         listener.Start();
         Console.WriteLine("Listen started");
 
@@ -87,7 +92,7 @@ public class MessageServer {
         connTask = conn.StartAsync();
 
         using CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
-        introCts.CancelAfter(5000);
+        introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         //Handle introduction
 
@@ -110,7 +115,11 @@ public class MessageServer {
             return;
         }
 
-        StringIdentifier id = protocol.ReceiveIntroduction(await handler.ReadOneIncomingAsync(linked.Token));
+        introCts.TryReset();
+        introCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+        StringIdentifier id = protocol.ReceiveIntroduction(await handler.ReadOneIncomingAsync(introCts.Token));
+        tokens.TryAdd(id, linked.Token);
 
         Console.WriteLine($"Introduction received, ID: {id.Value}");
 

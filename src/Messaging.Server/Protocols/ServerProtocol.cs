@@ -21,9 +21,12 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
     public StringIdentifier ReceiveIntroduction(MessageData message) => message.SourceId;
 
     public sealed override async Task<bool> ProcessAsync(MessageData message) {
+        bool result;
+
         switch (message.Type) {
             case MessageType.Ack:
                 Console.WriteLine("ACK received");
+                router.AckHandler.SubmitAck(message);
                 return true;
             
             case MessageType.TextMessage:
@@ -31,6 +34,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler)) {
                     try {
                         await EnqueueAck(handler, message.SourceId, message.TargetId, message.Id);
+
                     }
                     catch (Exception e) {
                         Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
@@ -40,7 +44,11 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                     Console.WriteLine("Sender disconnected before Ack could be sent");
                 }
 
-                await router.RouteMessageAsync(message);
+                result = await router.UpdateHighestAckAsync(message);
+
+                if (result)
+                    await router.RouteMessageAsync(message);
+                else Console.WriteLine("Message already acked, discarding");
                 return true;
             
             default:

@@ -16,7 +16,7 @@ public class PendingAckTracker {
     }
 
     //waits for waitLength for someone to call complete on the key
-    public async Task<bool> RegisterWait((long Id, StringIdentifier Target) key) {
+    public async Task<bool> RegisterWaitAsync((long Id, StringIdentifier Target) key) {
         // create tcs to complete
         TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         pendingMessages.TryAdd(key, tcs);

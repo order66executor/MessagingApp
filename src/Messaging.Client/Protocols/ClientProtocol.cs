@@ -65,7 +65,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
         };
 
         var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Waiting);
-        bool result = await ackHandler.EnqueueMessage(message);
+        bool result = await ackHandler.EnqueueMessageAsync(message);
 
         wrapper.State = result ? MessageState.Sent : MessageState.Unsent;
         await dbHandler.SaveDbChangesAsync();
