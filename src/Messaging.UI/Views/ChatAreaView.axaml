@@ -23,8 +23,8 @@
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
                     <DataTemplate x:DataType="vm:ChatMessageViewModel">
-                        <Border Background="{Binding BackgroundColor}" 
-                                CornerRadius="{Binding CornerRadius}" 
+                        <Border Background="{Binding Background}" 
+                                CornerRadius="{Binding BubbleCornerRadius}" 
                                 Padding="16,12" Margin="0,8" 
                                 HorizontalAlignment="{Binding Alignment}"
                                 MaxWidth="600"

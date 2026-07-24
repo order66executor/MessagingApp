@@ -1,4 +1,7 @@
 using System;
+using Avalonia;
+using Avalonia.Layout;
+using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
 using Messaging.Shared.Models;
 
@@ -18,17 +21,16 @@ public partial class ChatMessageViewModel : ViewModelBase
     [ObservableProperty]
     private MessageState _state;
 
-    // Computed properties for UI layout
-    public string Alignment => IsOwnMessage ? "Right" : "Left";
-    public string BackgroundColor => IsOwnMessage ? "#6610f2" : "#2A2D3E";
-    public string CornerRadius => IsOwnMessage ? "16,16,0,16" : "16,16,16,0";
+    // Computed properties returning proper Avalonia types for XAML binding
+    public HorizontalAlignment Alignment => IsOwnMessage ? HorizontalAlignment.Right : HorizontalAlignment.Left;
+    public IBrush Background => IsOwnMessage ? new SolidColorBrush(Color.Parse("#6610f2")) : new SolidColorBrush(Color.Parse("#2A2D3E"));
+    public CornerRadius BubbleCornerRadius => IsOwnMessage ? new CornerRadius(16, 16, 0, 16) : new CornerRadius(16, 16, 16, 0);
 
-    // Fix #7: Notify UI when IsOwnMessage changes so computed properties update
     partial void OnIsOwnMessageChanged(bool value)
     {
         OnPropertyChanged(nameof(Alignment));
-        OnPropertyChanged(nameof(BackgroundColor));
-        OnPropertyChanged(nameof(CornerRadius));
+        OnPropertyChanged(nameof(Background));
+        OnPropertyChanged(nameof(BubbleCornerRadius));
     }
 
     // For later: Attachment info

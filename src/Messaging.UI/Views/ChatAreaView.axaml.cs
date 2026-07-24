@@ -1,8 +1,6 @@
 using Avalonia;
-using Avalonia.Animation;
-using Avalonia.Animation.Easings;
 using Avalonia.Controls;
-using Avalonia.Styling;
+using Avalonia.Threading;
 using System;
 using System.Collections.Specialized;
 using Messaging.UI.ViewModels;
@@ -22,7 +20,6 @@ public partial class ChatAreaView : UserControl
     {
         base.OnDataContextChanged(e);
 
-        // Fix #2: Unsubscribe from old DataContext to prevent memory leak
         if (_previousVm != null)
         {
             _previousVm.Messages.CollectionChanged -= Messages_CollectionChanged;
@@ -43,37 +40,57 @@ public partial class ChatAreaView : UserControl
     {
         if (e.Action == NotifyCollectionChangedAction.Add || e.Action == NotifyCollectionChangedAction.Reset)
         {
-            // Fix #1: Flowy smooth scroll instead of instant jump
-            Avalonia.Threading.Dispatcher.UIThread.Post(() =>
+            // Post with low priority so layout is calculated before we scroll
+            Dispatcher.UIThread.Post(() =>
             {
                 var scrollViewer = this.FindControl<ScrollViewer>("MessageScrollViewer");
                 if (scrollViewer == null) return;
 
-                double targetOffset = scrollViewer.Extent.Height - scrollViewer.Viewport.Height;
-                if (targetOffset < 0) targetOffset = 0;
-
-                // Animate the scroll offset for a smooth "flowy" effect
-                var animation = new Animation
-                {
-                    Duration = TimeSpan.FromMilliseconds(300),
-                    Easing = new CubicEaseOut(),
-                    Children =
-                    {
-                        new KeyFrame
-                        {
-                            Cue = new Cue(0.0),
-                            Setters = { new Setter(ScrollViewer.OffsetProperty, scrollViewer.Offset) }
-                        },
-                        new KeyFrame
-                        {
-                            Cue = new Cue(1.0),
-                            Setters = { new Setter(ScrollViewer.OffsetProperty, new Vector(0, targetOffset)) }
-                        }
-                    }
-                };
-
-                animation.RunAsync(scrollViewer);
-            }, Avalonia.Threading.DispatcherPriority.Background);
+                SmoothScrollToEnd(scrollViewer);
+            }, DispatcherPriority.Background);
         }
+    }
+
+    private void SmoothScrollToEnd(ScrollViewer scrollViewer)
+    {
+        double startY = scrollViewer.Offset.Y;
+        double targetY = scrollViewer.Extent.Height - scrollViewer.Viewport.Height;
+
+        if (targetY < 0) targetY = 0;
+
+        // If already at the bottom or very close, just snap
+        if (Math.Abs(targetY - startY) < 1)
+        {
+            scrollViewer.Offset = new Vector(0, targetY);
+            return;
+        }
+
+        const int totalMs = 300;
+        const int intervalMs = 16; // ~60fps
+        int elapsed = 0;
+
+        var timer = new DispatcherTimer(DispatcherPriority.Render)
+        {
+            Interval = TimeSpan.FromMilliseconds(intervalMs)
+        };
+
+        timer.Tick += (_, _) =>
+        {
+            elapsed += intervalMs;
+            double progress = Math.Min(1.0, (double)elapsed / totalMs);
+
+            // Cubic ease-out: 1 - (1 - t)^3
+            double eased = 1.0 - Math.Pow(1.0 - progress, 3);
+
+            double currentY = startY + (targetY - startY) * eased;
+            scrollViewer.Offset = new Vector(0, currentY);
+
+            if (progress >= 1.0)
+            {
+                timer.Stop();
+            }
+        };
+
+        timer.Start();
     }
 }
