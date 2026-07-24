@@ -5,6 +5,14 @@ on:
 
 jobs:
   build:
+    strategy:
+      matrix:
+        project:
+          - name: Client
+            path: src/Messaging.UI/Messaging.UI.csproj
+          - name: Server
+            path: src/Messaging.Server/Messaging.Server.csproj
+
     runs-on: ubuntu-latest
 
     steps:
@@ -22,31 +30,32 @@ jobs:
       - name: Build
         run: dotnet build --configuration Release --no-restore
 
-      - name: Publish
+      - name: Publish ${{ matrix.project.name }}
         run: |
           dotnet publish \
+            ${{ matrix.project.path }} \
             -c Release \
-            -o publish
-
+            -o ./publish/${{ matrix.project.name }}
       - name: Upload Artifact
         uses: actions/upload-artifact@v4
         with:
           name: app
           path: publish/
+          
       - name: Deploy
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
-          source: "publish/*"
+          source: "publish/Server/*"
           target: "/opt/deploy/"
 
-      - name: Restart Service
-        uses: appleboy/ssh-action@v1.0.3
-        with:
-          host: ${{ secrets.SERVER_HOST }}
-          username: ${{ secrets.SERVER_USER }}
-          key: ${{ secrets.SSH_KEY }}
-          script: |
-            sudo systemctl restart messagingapp
+     # - name: Restart Service
+     #   uses: appleboy/ssh-action@v1.0.3
+     #   with:
+     #     host: ${{ secrets.SERVER_HOST }}
+     #     username: ${{ secrets.SERVER_USER }}
+     #     key: ${{ secrets.SSH_KEY }}
+     #     script: |
+     #       sudo systemctl restart messagingapp
