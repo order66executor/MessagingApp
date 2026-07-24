@@ -27,8 +27,8 @@ jobs:
       - name: Restore
         run: dotnet restore
 
-      - name: Build
-        run: dotnet build --configuration Release --no-restore
+      - name: Build ${{ matrix.project.name }}
+        run: dotnet build --project ${{ matrix.project.path }} --configuration Release --no-restore
 
       - name: Publish ${{ matrix.project.name }}
         run: |
@@ -48,6 +48,7 @@ jobs:
           host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
+          port: ${{ secrets.SSH_PORT }}
           source: "publish/Server/*"
           target: "/opt/deploy/"
 
