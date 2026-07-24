@@ -26,7 +26,7 @@ public class Program {
 
         AppDomain.CurrentDomain.ProcessExit += (sender, e) => cts.Cancel();
 
-        PosixSignalRegistration.Create(
+        using var termSignalRegistration = PosixSignalRegistration.Create(
             PosixSignal.SIGTERM,
             context =>
             {
@@ -36,7 +36,7 @@ public class Program {
                 context.Cancel = true;
             });
 
-        PosixSignalRegistration.Create(
+        using var intSignalRegistration = PosixSignalRegistration.Create(
             PosixSignal.SIGINT,
             context =>
             {
