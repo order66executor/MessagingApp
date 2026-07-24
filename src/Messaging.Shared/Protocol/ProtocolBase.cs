@@ -5,7 +5,7 @@ namespace Messaging.Shared.Protocol;
 
 public abstract class ProtocolBase : IMessageProtocol {
 
-    public abstract Task<bool> ProcessAsync(MessageData message);
+    public abstract Task<bool> ProcessAsync(StringIdentifier sourceId, MessageData message);
 
     protected async Task EnqueueAck(MessageConnectionHandler handler, StringIdentifier source, StringIdentifier target, long idToAck) {
         await handler.WriteToOutBufferAsync(CreateAck(source, target, idToAck));

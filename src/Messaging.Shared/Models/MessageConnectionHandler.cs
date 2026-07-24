@@ -9,9 +9,11 @@ public class MessageConnectionHandler {
     //buffer to write outgoing messages to
     private readonly MessageDataBuffer outBuffer;
     private readonly CancellationTokenSource ct;
+    private readonly StringIdentifier userId;
 
 
-    public MessageConnectionHandler(MessageConnection conn, CancellationTokenSource cts) {
+    public MessageConnectionHandler(StringIdentifier userId, MessageConnection conn, CancellationTokenSource cts) {
+        this.userId = userId;
         this.conn = conn;
         ct = cts;
         outBuffer = new();
@@ -35,7 +37,7 @@ public class MessageConnectionHandler {
             await foreach (MessageData data in conn.Buffer.Reader.ReadAllAsync(ct.Token)) {
 
                 // pass to protocol for handling
-                if (await protocol.ProcessAsync(data)) {
+                if (await protocol.ProcessAsync(userId, data)) {
 
                 }
                 else {

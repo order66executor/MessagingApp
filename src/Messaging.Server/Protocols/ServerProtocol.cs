@@ -20,7 +20,8 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
 
     public StringIdentifier ReceiveIntroduction(MessageData message) => message.SourceId;
 
-    public sealed override async Task<bool> ProcessAsync(MessageData message) {
+    public sealed override async Task<bool> ProcessAsync(StringIdentifier sourceId, MessageData message) {
+        if (sourceId != message.SourceId) return false;
         bool result;
 
         switch (message.Type) {

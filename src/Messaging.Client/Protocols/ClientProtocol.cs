@@ -23,7 +23,8 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
         ackHandler = ackWaitHandler;
     }
 
-    public sealed override async Task<bool> ProcessAsync(MessageData message) {
+    public sealed override async Task<bool> ProcessAsync(StringIdentifier id, MessageData message) {
+        if (id.Value != "SYSTEM") return false;
         switch (message.Type) {
             case MessageType.Ack:
                 Console.WriteLine("ACK Received");
