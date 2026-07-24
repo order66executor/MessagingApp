@@ -1,4 +1,5 @@
 using System.Collections.Concurrent;
+using System.Runtime.InteropServices;
 
 using Messaging.Server.Protocols;
 using Messaging.Shared.Models;
@@ -23,6 +24,24 @@ public class Program {
         };
 
         AppDomain.CurrentDomain.ProcessExit += (sender, e) => cts.Cancel();
+
+        PosixSignalRegistration.Create(
+            PosixSignal.SIGTERM,
+            context =>
+            {
+                Console.WriteLine("SIGTERM received");
+                cts.Cancel();
+                context.Cancel = true;
+            });
+
+        PosixSignalRegistration.Create(
+            PosixSignal.SIGINT,
+            context =>
+            {
+                Console.WriteLine("SIGINT received");
+                cts.Cancel();
+                context.Cancel = true;
+            });
 
         if (int.TryParse(args[0], out int port)) {
 
