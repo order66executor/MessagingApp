@@ -53,7 +53,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
                     Console.WriteLine($"File downloaded and saved to: {savePath}");
                     // Here we might want to trigger a local UI event
                 }
-                await EnqueueAck(connHandler, message.TargetId, message.SourceId, message.Id);
+                await EnqueueAck(connHandler, message.SourceId, message.TargetId, message.Id);
                 return true;
 
             default:

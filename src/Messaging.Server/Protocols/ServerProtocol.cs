@@ -49,7 +49,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                         _ = router.RouteMessageAsync(notifMsg);
                     }
                     try {
-                        await EnqueueAck(uploadHandler, new("SYSTEM"), message.SourceId, message.Id);
+                        await EnqueueAck(uploadHandler, new("SYSTEM"), message.TargetId, message.Id);
                     } catch (Exception e) {
                         Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
                     }
