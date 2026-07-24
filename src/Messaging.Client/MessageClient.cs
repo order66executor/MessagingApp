@@ -189,6 +189,16 @@ public class MessageClient {
         await protocol.SendTextMessageAsync(new StringIdentifier(target), text);
     }
 
+    public async Task SendFileAsync(string target, string filePath) {
+        if (protocol is null) return;
+        await protocol.SendFileAsync(new StringIdentifier(target), filePath);
+    }
+
+    public async Task RequestFileAsync(string fileId) {
+        if (protocol is null) return;
+        await protocol.RequestFileAsync(fileId);
+    }
+
     private async Task SendUnsentMessagesAsync() {
         MessageWrapper[] wrappers = await DbHandler.GetMessagesWithStateAsync(username, MessageState.Unsent);
 

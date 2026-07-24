@@ -6,4 +6,6 @@ using Messaging.Shared.Protocol;
 public interface IClientMessageProtocol : IMessageProtocol {
     MessageData CreateIntroduction();
     Task SendTextMessageAsync(StringIdentifier target, string text);
+    Task SendFileAsync(StringIdentifier target, string filePath);
+    Task RequestFileAsync(string fileId);
 }
