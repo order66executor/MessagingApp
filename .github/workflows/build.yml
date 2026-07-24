@@ -50,7 +50,6 @@ jobs:
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
-          protocol: tcp6
           source: "publish/Server/*"
           target: "/opt/deploy/"
           overwrite: true
