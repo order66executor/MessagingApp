@@ -3,13 +3,13 @@
              xmlns:vm="using:Messaging.UI.ViewModels"
              x:Class="Messaging.UI.Views.SidebarView"
              x:DataType="vm:SidebarViewModel"
-             Background="#1e1e2e">
+             Background="#0B0D17">
 
-    <Grid RowDefinitions="Auto,*,Auto" Margin="8">
+    <Grid RowDefinitions="Auto,*,Auto" Margin="16">
         
         <!-- Search / New Contact Header -->
-        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,16">
-            <TextBlock Text="Conversations" FontWeight="Bold" Foreground="#cdd6f4" FontSize="18"/>
+        <StackPanel Grid.Row="0" Spacing="8" Margin="0,0,0,24">
+            <TextBlock Text="Conversations" FontWeight="Bold" Foreground="#FFFFFF" FontSize="22"/>
         </StackPanel>
 
         <!-- Conversation List -->
@@ -20,30 +20,61 @@
                  BorderThickness="0">
             <ListBox.ItemTemplate>
                 <DataTemplate>
-                    <Border CornerRadius="8" Padding="12" Margin="0,2">
-                        <StackPanel Orientation="Horizontal" Spacing="12">
-                            <Border Width="40" Height="40" CornerRadius="20" Background="#89b4fa">
-                                <TextBlock Text="{Binding [0]}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#11111b" FontWeight="Bold" FontSize="18"/>
+                    <Border CornerRadius="12" Padding="12" Margin="0,4" Background="Transparent">
+                        <StackPanel Orientation="Horizontal" Spacing="16">
+                            <!-- Avatar with Gradient -->
+                            <Border Width="48" Height="48" CornerRadius="24">
+                                <Border.Background>
+                                    <LinearGradientBrush StartPoint="0%,0%" EndPoint="100%,100%">
+                                        <GradientStop Color="#6610f2" Offset="0"/>
+                                        <GradientStop Color="#00f2fe" Offset="1"/>
+                                    </LinearGradientBrush>
+                                </Border.Background>
+                                <TextBlock Text="{Binding [0]}" HorizontalAlignment="Center" VerticalAlignment="Center" Foreground="#FFFFFF" FontWeight="Bold" FontSize="20"/>
                             </Border>
-                            <TextBlock Text="{Binding}" VerticalAlignment="Center" Foreground="#cdd6f4" FontWeight="SemiBold"/>
+                            <TextBlock Text="{Binding}" VerticalAlignment="Center" Foreground="#FFFFFF" FontSize="16" FontWeight="SemiBold"/>
                         </StackPanel>
                     </Border>
                 </DataTemplate>
             </ListBox.ItemTemplate>
+            <ListBox.Styles>
+                <Style Selector="ListBoxItem">
+                    <Setter Property="Padding" Value="0" />
+                    <Setter Property="Margin" Value="0" />
+                </Style>
+                <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+                    <Setter Property="Background" Value="#1E2030" />
+                </Style>
+                <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+                    <Setter Property="Background" Value="#2A2D3E" />
+                </Style>
+            </ListBox.Styles>
         </ListBox>
 
         <!-- Start New Chat Section -->
-        <StackPanel Grid.Row="2" Spacing="8" Margin="0,16,0,0">
+        <StackPanel Grid.Row="2" Spacing="12" Margin="0,24,0,0">
             <TextBox PlaceholderText="Enter exact username..." 
                      Text="{Binding NewContactUsername}" 
-                     CornerRadius="6"/>
+                     CornerRadius="12"
+                     Background="#1E2030"
+                     Foreground="#FFFFFF"
+                     BorderThickness="0"
+                     Padding="12"/>
             <Button Content="Start Chat" 
                     Command="{Binding StartNewChatCommand}"
                     HorizontalAlignment="Stretch" 
                     HorizontalContentAlignment="Center"
-                    Background="#313244"
-                    Foreground="#cdd6f4"
-                    CornerRadius="6"/>
+                    Background="#2A2D3E"
+                    Foreground="#00f2fe"
+                    FontWeight="Bold"
+                    CornerRadius="12"
+                    Padding="12">
+                <Button.Styles>
+                    <Style Selector="Button:pointerover /template/ ContentPresenter">
+                        <Setter Property="Background" Value="#313244"/>
+                    </Style>
+                </Button.Styles>
+            </Button>
         </StackPanel>
         
     </Grid>

@@ -3,15 +3,15 @@
              xmlns:vm="using:Messaging.UI.ViewModels"
              x:Class="Messaging.UI.Views.ChatAreaView"
              x:DataType="vm:ChatAreaViewModel"
-             Background="#181825">
+             Background="#0B0D17">
 
     <Grid RowDefinitions="Auto,*,Auto">
         
         <!-- Header -->
-        <Border Grid.Row="0" Background="#1e1e2e" Padding="16" BorderBrush="#313244" BorderThickness="0,0,0,1">
+        <Border Grid.Row="0" Background="#1E2030" Padding="16" BorderBrush="#2A2D3E" BorderThickness="0,0,0,1">
             <StackPanel Orientation="Horizontal" Spacing="12">
                 <TextBlock Text="{Binding PartnerUsername, TargetNullValue='No conversation selected'}" 
-                           Foreground="#cdd6f4" 
+                           Foreground="#FFFFFF" 
                            FontWeight="Bold" 
                            FontSize="18" 
                            VerticalAlignment="Center"/>
@@ -19,13 +19,24 @@
         </Border>
 
         <!-- Message List -->
-        <ScrollViewer Grid.Row="1" Margin="16">
+        <ScrollViewer Grid.Row="1" Margin="16" x:Name="MessageScrollViewer">
             <ItemsControl ItemsSource="{Binding Messages}">
                 <ItemsControl.ItemTemplate>
-                    <DataTemplate>
-                        <!-- Simple message view for now -->
-                        <Border Background="#313244" CornerRadius="12" Padding="12,8" Margin="0,4" HorizontalAlignment="Left">
-                            <TextBlock Text="{Binding}" Foreground="#cdd6f4" TextWrapping="Wrap"/>
+                    <DataTemplate x:DataType="vm:ChatMessageViewModel">
+                        <Border Background="{Binding BackgroundColor}" 
+                                CornerRadius="{Binding CornerRadius}" 
+                                Padding="16,12" Margin="0,8" 
+                                HorizontalAlignment="{Binding Alignment}"
+                                MaxWidth="600"
+                                BoxShadow="0 4 10 0 #40000000">
+                            
+                            <StackPanel>
+                                <TextBlock Text="{Binding Text}" Foreground="#FFFFFF" TextWrapping="Wrap" FontSize="15"/>
+                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0" Spacing="4">
+                                    <TextBlock Text="{Binding Timestamp, StringFormat='HH:mm'}" Foreground="#A0A0A0" FontSize="11"/>
+                                    <!-- Status indicator (Sent, Pending, etc) can go here based on State -->
+                                </StackPanel>
+                            </StackPanel>
                         </Border>
                     </DataTemplate>
                 </ItemsControl.ItemTemplate>
@@ -33,33 +44,46 @@
         </ScrollViewer>
 
         <!-- Input Area -->
-        <Border Grid.Row="2" Background="#1e1e2e" Padding="16" BorderBrush="#313244" BorderThickness="0,1,0,0">
-            <Grid ColumnDefinitions="*,Auto">
-                <TextBox Grid.Column="0" 
+        <Border Grid.Row="2" Background="#1E2030" Padding="16" BorderBrush="#2A2D3E" BorderThickness="0,1,0,0">
+            <Grid ColumnDefinitions="Auto,*,Auto">
+                
+                <!-- Attachment Button -->
+                <Button Grid.Column="0" 
+                        Content="📎" 
+                        Background="Transparent"
+                        Foreground="#89b4fa"
+                        FontSize="20"
+                        Margin="0,0,12,0"
+                        Padding="8"
+                        CornerRadius="20"/>
+
+                <TextBox Grid.Column="1" 
                          PlaceholderText="Type a message..." 
                          Text="{Binding MessageInput}" 
                          CornerRadius="20"
                          Padding="16,8"
                          Margin="0,0,12,0"
-                         Background="#181825"
+                         Background="#0B0D17"
+                         Foreground="#FFFFFF"
                          BorderThickness="0">
                      <TextBox.KeyBindings>
                          <KeyBinding Gesture="Enter" Command="{Binding SendMessageCommand}" />
                      </TextBox.KeyBindings>
                 </TextBox>
                 
-                <Button Grid.Column="1" 
+                <Button Grid.Column="2" 
                         Content="Send" 
                         Command="{Binding SendMessageCommand}"
-                        Background="#89b4fa" 
-                        Foreground="#11111b" 
+                        Background="#6610f2" 
+                        Foreground="#FFFFFF" 
+                        FontWeight="Bold"
                         CornerRadius="20"
                         Padding="24,8"/>
             </Grid>
         </Border>
         
         <!-- Empty State Overlay -->
-        <Grid Grid.RowSpan="3" Background="#181825" IsVisible="{Binding PartnerUsername, Converter={x:Static ObjectConverters.IsNull}}">
+        <Grid Grid.RowSpan="3" Background="#0B0D17" IsVisible="{Binding PartnerUsername, Converter={x:Static ObjectConverters.IsNull}}">
             <TextBlock Text="Select a conversation to start chatting" 
                        Foreground="#7f849c" 
                        HorizontalAlignment="Center" 
