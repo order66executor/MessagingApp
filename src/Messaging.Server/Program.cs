@@ -37,7 +37,7 @@ public class Program {
 
         Task serverTask = server.RunAsync();
 
-        while (true) {
+/*         while (true) {
             string? input = Console.ReadLine();
 
             if (input is null) continue;
@@ -48,11 +48,12 @@ public class Program {
                 break;
             }
 
-        }
+        } */
 
         await serverTask;
 
-        cts.Dispose();
+        Console.WriteLine("Exiting gracefully");
+
 
     }
 }
