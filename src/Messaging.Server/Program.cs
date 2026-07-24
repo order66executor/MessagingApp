@@ -13,6 +13,11 @@ public class Program {
 
 
     private static async Task Main(string[] args) {
+        Console.SetOut(new StreamWriter(Console.OpenStandardOutput())
+        {
+            AutoFlush = true
+        });
+
         if (args.Length < 1) {
             Console.WriteLine("At least 1 parameter required for port number");
             return;
