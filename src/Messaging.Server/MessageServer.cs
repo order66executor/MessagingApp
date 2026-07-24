@@ -5,6 +5,10 @@ using System.Net.Sockets;
 using Messaging.Shared.Models;
 using Messaging.Server.Protocols;
 using Messaging.Server.Services;
+using System.Net.Security;
+using Microsoft.EntityFrameworkCore.Diagnostics;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Authentication;
 
 
 namespace Messaging.Server;
@@ -16,6 +20,7 @@ public class MessageServer {
     private readonly IServerMessageProtocol protocol;
 
     private readonly TcpListener listener;
+    private readonly bool useTls;
 
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
 
@@ -24,9 +29,10 @@ public class MessageServer {
     private readonly ConcurrentDictionary<StringIdentifier, CancellationToken> tokens;
     private readonly CancellationToken ct;
 
-    public MessageServer(int port, IServerMessageProtocolFactory factory, CancellationToken ct) {
+    public MessageServer(int port, IServerMessageProtocolFactory factory, bool useTls, CancellationToken ct) {
         Port = port;
         listener = new(IPAddress.IPv6Any, Port);
+        this.useTls = useTls;
         handlers = new();
         tokens = new();
         
@@ -87,7 +93,13 @@ public class MessageServer {
         using CancellationTokenSource cts = new();
         using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
 
-        MessageConnection conn = new(client, linked.Token);
+        MessageConnection conn = new(client, useTls, linked.Token);
+
+        if (useTls) {
+            if (!await ServerAuthTlsAsync(conn))
+                return;
+            Console.WriteLine("TLS authentication successful");
+        }
 
         Task connTask;
 
@@ -146,5 +158,32 @@ public class MessageServer {
             cts.Cancel();
             await connTask;
         }
+    }
+
+    public static async Task<bool> ServerAuthTlsAsync(MessageConnection conn) {
+        string password = Environment.GetEnvironmentVariable("PFX_PASSWORD") ?? throw new InvalidOperationException("PFX_PASSWORD is not set");
+        string certificatePath = Environment.GetEnvironmentVariable("PFX_LOCATION") ?? throw new InvalidOperationException("PFX_LOCATION is not set");
+        var certificate = X509CertificateLoader.LoadPkcs12FromFile(
+            certificatePath,
+            password);
+
+        if (conn.Stream is not SslStream sslStream) {
+            Console.WriteLine("stream is null when authenticating as server");
+            return false;
+        }
+
+        try {
+            await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions() {
+                ServerCertificate = certificate,
+                EnabledSslProtocols = SslProtocols.Tls13 | SslProtocols.Tls12
+            });
+        }
+        catch (Exception e) {
+            Console.WriteLine($"Exception when authenticating as server: {e.Message}");
+            return false;
+        }
+
+        return true;
+
     }
 }

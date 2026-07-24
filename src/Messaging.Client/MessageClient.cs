@@ -5,8 +5,11 @@ using Messaging.Shared.Models;
 using Messaging.Client.Protocols;
 using Messaging.Client.Services;
 using Messaging.Shared.Services;
-using System.Runtime.InteropServices;
 using System.Text.Json;
+using System.Net.Security;
+using System.Security.Authentication;
+using System.Security.Cryptography.X509Certificates;
+using System.Reflection;
 
 namespace Messaging.Client;
 
@@ -19,6 +22,7 @@ public class MessageClient {
     private readonly IClientMessageProtocolFactory factory;
 
     private readonly TcpClient client;
+    private readonly bool useTls;
 
     private MessageConnection? conn;
     private MessageConnectionHandler? handler;
@@ -27,13 +31,14 @@ public class MessageClient {
     public ClientDbHandler DbHandler { get; }
     private AckWaitHandler? ackHandler;
 
-    public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username) {
+    public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username, bool useTls) {
         this.address = address;
         this.port = port;
         this.factory = factory;
         client = new(AddressFamily.InterNetworkV6);
         this.username = username;
         DbHandler = new();
+        this.useTls = useTls;
     }
 
     // Connects and introduces to server, then starts listening for incoming and outgoing messages
@@ -55,7 +60,13 @@ public class MessageClient {
         }
 
         Console.WriteLine("Connection successful");
-        conn = new(client, linked.Token);
+        conn = new(client, useTls, linked.Token);
+
+        if (useTls) {
+            if (!await AuthTlsAsync())
+                return;
+            Console.WriteLine("TLS authentication successful");
+        }
 
         // Start the connection's incoming listener
         Task connTask = conn.StartAsync();
@@ -124,6 +135,49 @@ public class MessageClient {
         await handlerTask;
         await connTask;
         cts.Cancel();
+    }
+
+    private async Task<bool> AuthTlsAsync() {
+        if (conn is null) {
+            Console.WriteLine("Conn is null when authenticating");
+            return false;
+        }
+        if (conn.Stream is not SslStream sslStream) {
+            Console.WriteLine("stream is null when authenticating");
+            return false;
+        }
+
+        var assembly = Assembly.GetExecutingAssembly();
+        using var stream = assembly.GetManifestResourceStream("Messaging.Client.Certificates.ca.crt");
+        if (stream is null) {
+            Console.WriteLine("CA cert could not be loaded");
+            return false;
+        }
+        using var ms = new MemoryStream();
+        await stream.CopyToAsync(ms);
+
+
+        var ca = X509CertificateLoader.LoadCertificate(ms.ToArray());
+
+        try {
+            await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions() {
+                TargetHost = "msgserver.public",
+                EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
+                CertificateChainPolicy = new X509ChainPolicy() {
+                    TrustMode = X509ChainTrustMode.CustomRootTrust,
+                    CustomTrustStore = { ca },
+                    RevocationMode = X509RevocationMode.NoCheck
+                }
+
+            });
+        }
+        catch (Exception e) {
+            Console.WriteLine($"Error authenticating: {e.Message}");
+            return false;
+        }
+
+        return true;
+
     }
 
     // Queue a text message to the outgoing buffer

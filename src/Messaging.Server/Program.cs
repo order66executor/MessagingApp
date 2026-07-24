@@ -18,8 +18,10 @@ public class Program {
         }
 
         if (int.TryParse(args[0], out int port)) {
-            ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers = [ ];
-            server = new MessageServer(port, new ServerProtocolFactory(), cts.Token);
+
+            bool tls = !args.Contains("--notls");
+
+            server = new MessageServer(port, new ServerProtocolFactory(), tls, cts.Token);
         }
         else {
             Console.WriteLine("Invalid port number");

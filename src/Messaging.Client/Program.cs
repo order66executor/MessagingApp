@@ -23,8 +23,16 @@ public class Program {
         if (int.TryParse(args[1], out int port) && IPAddress.TryParse(args[0], out IPAddress? address)) {
             Console.Write("Enter username: ");
 
-            while ((username = Console.ReadLine()) is null);
-            client = new(address, port, new ClientProtocolFactory(), username);
+            bool tls = !args.Contains("--notls");
+
+            username = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(username))
+            {
+                throw new InvalidOperationException("Username is required.");
+            }
+
+            client = new(address, port, new ClientProtocolFactory(), username, tls);
         }
         else {
             Console.WriteLine("Invalid port number or address");

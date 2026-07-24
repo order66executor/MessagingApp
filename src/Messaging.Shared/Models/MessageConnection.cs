@@ -1,22 +1,28 @@
 using System.Net.Sockets;
 using System.Buffers.Binary;
 using System.Text.Json;
+using System.Net.Security;
 
 namespace Messaging.Shared.Models;
 
 public class MessageConnection {
     private static readonly short sizeByteCount = 4;
     private readonly TcpClient client;
-    private readonly NetworkStream stream;
+    public Stream Stream { get; }
     private readonly CancellationToken ct;
+    private readonly bool useTls;
 
     //Buffer where incoming MessageData is placed
     public MessageDataBuffer Buffer { get; }
 
-    public MessageConnection(TcpClient client, CancellationToken ct) {
+    public MessageConnection(TcpClient client, bool useTls, CancellationToken ct) {
         this.client = client;
+        this.useTls = useTls;
         Buffer = new();
-        stream = client.GetStream();
+
+        Stream = !useTls ? client.GetStream() : new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
+
+
         this.ct = ct;
 
         client.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.KeepAlive, true);
@@ -24,6 +30,7 @@ public class MessageConnection {
         client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveInterval, 10);
         client.Client.SetSocketOption(SocketOptionLevel.Tcp, SocketOptionName.TcpKeepAliveRetryCount, 5);
     }
+
 
     public async Task StartAsync() {
         try {
@@ -34,7 +41,7 @@ public class MessageConnection {
 
                 // wait until a new message is received then read the size into sizeBuffer
                 try {
-                    await stream.ReadExactlyAsync(sizeBuffer, ct);
+                    await Stream.ReadExactlyAsync(sizeBuffer, ct);
                 }
                 catch (Exception e) {
                     Console.WriteLine($"Listening for incoming tcp packets aborted: {e.Message}");
@@ -52,7 +59,7 @@ public class MessageConnection {
                 byte[] payloadBuffer = new byte[size];
 
                 // read message content
-                await stream.ReadExactlyAsync(payloadBuffer, ct);
+                await Stream.ReadExactlyAsync(payloadBuffer, ct);
 
                 MessageData? data;
 
@@ -95,8 +102,8 @@ public class MessageConnection {
 
         try {
             // send size then payload
-            await stream.WriteAsync(sizeAsBytes, ct);
-            await stream.WriteAsync(payload, ct);
+            await Stream.WriteAsync(sizeAsBytes, ct);
+            await Stream.WriteAsync(payload, ct);
         }
         catch (OperationCanceledException e) {
             Console.WriteLine($"The operation was cancelled: {e.Message}");

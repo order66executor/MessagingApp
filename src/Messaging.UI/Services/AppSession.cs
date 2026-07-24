@@ -22,7 +22,8 @@ public class AppSession
         }
 
         CurrentUsername = username;
-        Client = new MessageClient(address, port, new ClientProtocolFactory(), username);
+        // TODO: use tls tickbox
+        Client = new MessageClient(address, port, new ClientProtocolFactory(), username, true);
         Client.DbHandler.OnMessageAdded += (wrapper) => 
         {
             WeakReferenceMessenger.Default.Send(new Messages.NewMessageReceivedMessage(wrapper));

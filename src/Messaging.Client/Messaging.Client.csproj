@@ -3,6 +3,9 @@
   <ItemGroup>
     <ProjectReference Include="..\Messaging.Shared\Messaging.Shared.csproj" />
   </ItemGroup>
+  <ItemGroup>
+    <EmbeddedResource Include="Certificates/ca.crt" />
+  </ItemGroup>
 
   <PropertyGroup>
     <OutputType>Exe</OutputType>
