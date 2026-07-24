@@ -51,8 +51,8 @@ public class MessageConnection {
                 // convert bytes to int
                 int size = BinaryPrimitives.ReadInt32BigEndian(sizeBuffer);
 
-                if (size is > 512 or < 0) {
-                    Console.WriteLine($"Size is over 512 or less than 0, it is: {size}");
+                if (size is > 20_971_520 or < 0) {
+                    Console.WriteLine($"Size is over 20MB or less than 0, it is: {size}");
                     throw new Exception();
                 }
 
