@@ -52,6 +52,7 @@ jobs:
           port: ${{ secrets.SSH_PORT }}
           source: "publish/Server/*"
           target: "/opt/deploy/"
+          strip_components: 2
           overwrite: true
 
      # - name: Restart Service
