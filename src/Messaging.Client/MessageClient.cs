@@ -189,7 +189,7 @@ public class MessageClient {
     }
 
     private async Task SendUnsentMessagesAsync() {
-        MessageWrapper[] wrappers = await DbHandler.GetMessagesWithStateAsync(MessageState.Unsent);
+        MessageWrapper[] wrappers = await DbHandler.GetMessagesWithStateAsync(username, MessageState.Unsent);
 
         List<Task<bool>> sendTasks = [ ];
         List<MessageWrapper> realPendingMessages = [ ];

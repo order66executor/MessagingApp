@@ -84,11 +84,11 @@ public class ClientDbHandler {
             .ToArrayAsync();
     }
 
-    public async Task<MessageWrapper[]> GetMessagesWithStateAsync(MessageState state) {
+    public async Task<MessageWrapper[]> GetMessagesWithStateAsync(string username, MessageState state) {
         using var db = CreateDbContext();
 
         return await db.Messages
-            .Where(m => m.State == state)
+            .Where(m => m.State == state && m.SenderUsername == username)
             .OrderBy(m => m.SequenceId)
             .ToArrayAsync();
 
