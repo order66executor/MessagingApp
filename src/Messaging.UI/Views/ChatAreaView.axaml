@@ -32,6 +32,17 @@
                             
                             <StackPanel>
                                 <TextBlock Text="{Binding Text}" Foreground="#FFFFFF" TextWrapping="Wrap" FontSize="15"/>
+                                
+                                <!-- File Download Button (Only visible for FileNotifications) -->
+                                <Button Content="⬇️ Download" 
+                                        Command="{Binding DownloadCommand}"
+                                        IsVisible="{Binding IsFileNotification}"
+                                        Background="#313244"
+                                        Foreground="#89b4fa"
+                                        Margin="0,8,0,0"
+                                        Padding="8,4"
+                                        CornerRadius="8"/>
+
                                 <StackPanel Orientation="Horizontal" HorizontalAlignment="Right" Margin="0,4,0,0" Spacing="4">
                                     <TextBlock Text="{Binding Timestamp, StringFormat='HH:mm'}" Foreground="#A0A0A0" FontSize="11"/>
                                     <!-- Status indicator (Sent, Pending, etc) can go here based on State -->
@@ -50,6 +61,7 @@
                 <!-- Attachment Button -->
                 <Button Grid.Column="0" 
                         Content="📎" 
+                        Command="{Binding SendFileCommand}"
                         Background="Transparent"
                         Foreground="#89b4fa"
                         FontSize="20"
