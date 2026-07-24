@@ -90,8 +90,29 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
     }
 
     private async Task SendAndWaitForAckAsync(MessageData message) {
-        var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Pending);
-        bool result = await ackHandler.EnqueueMessageAsync(message);
+        MessageData messageToSave = message;
+
+        // Strip the heavy binary data before saving to local SQLite DB
+        if (message.Type == MessageType.FileUpload) {
+            var originalPayload = JsonSerializer.Deserialize<FileUploadPayload>(message.Payload);
+            if (originalPayload != null) {
+                var emptyPayload = new FileUploadPayload { 
+                    FileName = originalPayload.FileName, 
+                    FileData = [] // Empty array to save space
+                };
+                messageToSave = new MessageData {
+                    Id = message.Id,
+                    Type = message.Type,
+                    SourceId = message.SourceId,
+                    TargetId = message.TargetId,
+                    SentAtUtc = message.SentAtUtc,
+                    Payload = JsonSerializer.SerializeToUtf8Bytes(emptyPayload)
+                };
+            }
+        }
+
+        var wrapper = await dbHandler.PlaceMessageAsync(messageToSave, MessageState.Pending);
+        bool result = await ackHandler.EnqueueMessageAsync(message); // Send the ORIGINAL message with full data
 
         if (result) Console.WriteLine("Setting message state to sent");
 
