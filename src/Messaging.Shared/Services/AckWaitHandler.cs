@@ -155,7 +155,7 @@ public class AckWaitHandler {
     }
 
     public void SubmitAck(MessageData message) {
-        tracker.Complete((message.Id, useSourceId ? message.SourceId : message.TargetId));
+        tracker.Complete((message.Id, message.TargetId));
     }
 
 

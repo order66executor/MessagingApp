@@ -34,7 +34,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
             case MessageType.TextMessage:
                 Console.WriteLine($"Message ID: {message.Id} received from: {message.SourceId}, content: {Encoding.UTF8.GetString(message.Payload)}");
                 await dbHandler.PlaceMessageAsync(message, MessageState.Sent);
-                await EnqueueAck(connHandler, message.SourceId, message.TargetId, message.Id);
+                await EnqueueAck(connHandler, message.TargetId, message.SourceId, message.Id);
                 return true;
 
             default:

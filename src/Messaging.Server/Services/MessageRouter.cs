@@ -59,7 +59,7 @@ public class MessageRouter  {
             Console.WriteLine("Message data was null when attempting to send during sweep");
             return;
         }
-        if (handlers.TryGetValue(message.TargetId, out MessageConnectionHandler? targetHandler)) {
+        if (handlers.TryGetValue(message.TargetId, out _)) {
             try {
                 bool result = await AckHandler.EnqueueMessageAsync(message);
                 
