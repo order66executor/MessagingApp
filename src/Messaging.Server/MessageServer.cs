@@ -137,6 +137,8 @@ public class MessageServer {
 
         Console.WriteLine($"Introduction received, ID: {id.Value}");
 
+        handler.UserId = id;
+
         // add id-handler pair to active connections
         handlers.TryAdd(id, handler);
         Task handlerTask;

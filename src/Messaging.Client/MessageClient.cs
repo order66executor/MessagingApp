@@ -72,6 +72,7 @@ public class MessageClient {
         Task connTask = conn.StartAsync();
 
         handler = new(conn, linked);
+        handler.UserId = new("SYSTEM");
         ackHandler = new(handler, true, linked.Token);
         protocol = factory.CreateProtocol(selfId, handler, DbHandler, ackHandler);
 
