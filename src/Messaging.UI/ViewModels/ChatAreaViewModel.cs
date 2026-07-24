@@ -45,44 +45,12 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
 
         var history = await _appSession.Client.DbHandler.GetMessagesAsync(convKey);
 
-        // UI Updates MUST happen on UI thread, but GetMessagesAsync is asynchronous
-        // CommunityToolkit handles property changes, but ObservableCollection updates
-        // from async might need Dispatcher. Let's do it safely:
         Avalonia.Threading.Dispatcher.UIThread.Post(() =>
         {
             foreach (var wrapper in history)
             {
-                var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.MessageData>(wrapper.SerializedMessageData);
-                if (msgData != null)
-                {
-                    bool isOwn = wrapper.SenderUsername == _appSession.CurrentUsername;
-                    var vm = new ChatMessageViewModel
-                    {
-                        IsOwnMessage = isOwn,
-                        Timestamp = msgData.SentAtUtc.ToLocalTime(),
-                        State = wrapper.State,
-                        DownloadAction = DownloadFile
-                    };
-
-                    if (msgData.Type == Messaging.Shared.Models.MessageType.TextMessage)
-                    {
-                        vm.Text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
-                    }
-                    else if (msgData.Type == Messaging.Shared.Models.MessageType.FileNotification)
-                    {
-                        var notifPayload = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.FileNotificationPayload>(msgData.Payload);
-                        if (notifPayload != null)
-                        {
-                            vm.IsFileNotification = true;
-                            vm.FileId = notifPayload.FileId;
-                            vm.FileName = notifPayload.FileName;
-                            vm.FileSizeDisplay = $"{notifPayload.FileSize / 1024} KB";
-                            vm.Text = $"📎 {notifPayload.FileName}";
-                        }
-                    }
-                    
-                    Messages.Add(vm);
-                }
+                var vm = CreateChatMessageViewModel(wrapper);
+                if (vm != null) Messages.Add(vm);
             }
         });
     }
@@ -91,7 +59,6 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
     {
         if (string.IsNullOrEmpty(PartnerUsername) || _appSession?.CurrentUsername == null) return;
 
-        // Check if message belongs to the current conversation
         bool isForCurrentPartner = (message.Wrapper.SenderUsername == PartnerUsername && message.Wrapper.ReceiverUsername == _appSession.CurrentUsername) ||
                                    (message.Wrapper.SenderUsername == _appSession.CurrentUsername && message.Wrapper.ReceiverUsername == PartnerUsername);
 
@@ -99,39 +66,54 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
         {
             Avalonia.Threading.Dispatcher.UIThread.Post(() =>
             {
-                var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.MessageData>(message.Wrapper.SerializedMessageData);
-                if (msgData != null)
-                {
-                    bool isOwn = message.Wrapper.SenderUsername == _appSession.CurrentUsername;
-                    var vm = new ChatMessageViewModel
-                    {
-                        IsOwnMessage = isOwn,
-                        Timestamp = msgData.SentAtUtc.ToLocalTime(),
-                        State = message.Wrapper.State,
-                        DownloadAction = DownloadFile
-                    };
-
-                    if (msgData.Type == Messaging.Shared.Models.MessageType.TextMessage)
-                    {
-                        vm.Text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
-                    }
-                    else if (msgData.Type == Messaging.Shared.Models.MessageType.FileNotification)
-                    {
-                        var notifPayload = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.FileNotificationPayload>(msgData.Payload);
-                        if (notifPayload != null)
-                        {
-                            vm.IsFileNotification = true;
-                            vm.FileId = notifPayload.FileId;
-                            vm.FileName = notifPayload.FileName;
-                            vm.FileSizeDisplay = $"{notifPayload.FileSize / 1024} KB";
-                            vm.Text = $"📎 {notifPayload.FileName}";
-                        }
-                    }
-                    
-                    Messages.Add(vm);
-                }
+                var vm = CreateChatMessageViewModel(message.Wrapper);
+                if (vm != null) Messages.Add(vm);
             });
         }
+    }
+
+    private ChatMessageViewModel? CreateChatMessageViewModel(Messaging.Shared.Models.MessageWrapper wrapper)
+    {
+        var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.MessageData>(wrapper.SerializedMessageData);
+        if (msgData == null || _appSession?.CurrentUsername == null) return null;
+
+        bool isOwn = wrapper.SenderUsername == _appSession.CurrentUsername;
+        var vm = new ChatMessageViewModel
+        {
+            IsOwnMessage = isOwn,
+            Timestamp = msgData.SentAtUtc.ToLocalTime(),
+            State = wrapper.State,
+            DownloadAction = DownloadFile
+        };
+
+        switch (msgData.Type)
+        {
+            case Messaging.Shared.Models.MessageType.TextMessage:
+                vm.Text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
+                break;
+
+            case Messaging.Shared.Models.MessageType.FileNotification:
+                var notifPayload = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.FileNotificationPayload>(msgData.Payload);
+                if (notifPayload != null)
+                {
+                    vm.IsFileNotification = true;
+                    vm.FileId = notifPayload.FileId;
+                    vm.FileName = notifPayload.FileName;
+                    vm.FileSizeDisplay = $"{notifPayload.FileSize / 1024} KB";
+                    vm.Text = $"📎 {notifPayload.FileName}";
+                }
+                break;
+
+            case Messaging.Shared.Models.MessageType.FileUpload:
+                var uploadPayload = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.FileUploadPayload>(msgData.Payload);
+                vm.Text = uploadPayload != null ? $"📤 {uploadPayload.FileName} (elküldve)" : "📤 Fájl elküldve";
+                break;
+
+            default:
+                return null; // Don't display unknown/internal message types (e.g. FileRequest)
+        }
+
+        return vm;
     }
 
     [RelayCommand]
