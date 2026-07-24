@@ -57,6 +57,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 return true;
 
             case MessageType.FileRequest:
+                Console.WriteLine("File request received");
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? requestHandler)) {
                     var reqPayload = JsonSerializer.Deserialize<FileRequestPayload>(message.Payload);
                     if (reqPayload != null) {
@@ -72,7 +73,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                         }
                     }
                     try {
-                        await EnqueueAck(requestHandler, new("SYSTEM"), message.SourceId, message.Id);
+                        await EnqueueAck(requestHandler, message.SourceId, new("SYSTEM"), message.Id);
                     } catch (Exception e) {
                         Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
                     }
