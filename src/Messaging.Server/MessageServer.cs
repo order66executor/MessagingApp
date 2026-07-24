@@ -178,7 +178,7 @@ public class MessageServer {
         }
     }
 
-    public static async Task<bool> ServerAuthTlsAsync(MessageConnection conn) {
+    public async Task<bool> ServerAuthTlsAsync(MessageConnection conn) {
         // get pfx location and password from evnrionment variables
         string password = Environment.GetEnvironmentVariable("PFX_PASSWORD") ?? throw new InvalidOperationException("PFX_PASSWORD is not set");
         string certificatePath = Environment.GetEnvironmentVariable("PFX_LOCATION") ?? throw new InvalidOperationException("PFX_LOCATION is not set");
@@ -198,7 +198,7 @@ public class MessageServer {
             await sslStream.AuthenticateAsServerAsync(new SslServerAuthenticationOptions() {
                 ServerCertificate = certificate,
                 EnabledSslProtocols = SslProtocols.Tls13 | SslProtocols.Tls12
-            });
+            }, ct);
         }
         catch (Exception e) {
             Console.WriteLine($"Exception when authenticating as server: {e.Message}");

@@ -13,8 +13,8 @@ public class Program {
 
 
     private static async Task Main(string[] args) {
-        if (args.Length != 1) {
-            Console.WriteLine("Exactly 1 parameter required for port number");
+        if (args.Length < 1) {
+            Console.WriteLine("At least 1 parameter required for port number");
             return;
         }
 
