@@ -147,6 +147,7 @@ public class MessageClient {
             return false;
         }
 
+        // load the certificate as bytes from the assembly
         var assembly = Assembly.GetExecutingAssembly();
         using var stream = assembly.GetManifestResourceStream("Messaging.Client.Certificates.ca.crt");
         if (stream is null) {
@@ -156,10 +157,11 @@ public class MessageClient {
         using var ms = new MemoryStream();
         await stream.CopyToAsync(ms);
 
-
+        // load certificate from bytes
         var ca = X509CertificateLoader.LoadCertificate(ms.ToArray());
 
         try {
+            // athenticate as client with the CA certificate
             await sslStream.AuthenticateAsClientAsync(new SslClientAuthenticationOptions() {
                 TargetHost = "msgserver.public",
                 EnabledSslProtocols = SslProtocols.Tls12 | SslProtocols.Tls13,
