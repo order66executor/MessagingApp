@@ -28,7 +28,7 @@ jobs:
         run: dotnet restore
 
       - name: Build ${{ matrix.project.name }}
-        run: dotnet build --project ${{ matrix.project.path }} --configuration Release --no-restore
+        run: dotnet build ${{ matrix.project.path }} --configuration Release --no-restore
 
       - name: Publish ${{ matrix.project.name }}
         run: |
@@ -43,6 +43,7 @@ jobs:
           path: publish/
           
       - name: Deploy
+        if: matrix.project.name == 'Server'
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SERVER_HOST }}
