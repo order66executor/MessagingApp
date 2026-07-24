@@ -34,6 +34,9 @@ public partial class LoginViewModel : ViewModelBase
     [ObservableProperty]
     private bool _isRegisterMode = false;
 
+    [ObservableProperty]
+    private bool _useTls = true;
+
     // Computed UI labels
     public string ActionButtonText => IsRegisterMode ? "Register" : "Connect";
     public string ToggleModeText => IsRegisterMode ? "Already have an account? Login" : "Don't have an account? Register";
@@ -104,7 +107,7 @@ public partial class LoginViewModel : ViewModelBase
         ErrorMessage = "";
 
         // TODO: Pass Password and IsRegisterMode to ConnectAsync when backend auth is implemented
-        bool success = _appSession != null && await _appSession.ConnectAsync(IpAddress, portNum, Username);
+        bool success = _appSession != null && await _appSession.ConnectAsync(IpAddress, portNum, Username, UseTls);
 
         IsConnecting = false;
         

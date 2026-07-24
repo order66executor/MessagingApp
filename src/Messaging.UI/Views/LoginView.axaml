@@ -68,10 +68,15 @@
                          CornerRadius="12"
                          Background="#2A2D3E"
                          Foreground="#FFFFFF"
-                         BorderThickness="0"
                          Padding="12"
                          IsVisible="{Binding IsRegisterMode}"/>
                 
+                <!-- TLS Toggle -->
+                <CheckBox Content="Use TLS"
+                          IsChecked="{Binding UseTls}"
+                          Foreground="#FFFFFF"
+                          Margin="0,4,0,0"/>
+
                 <TextBlock Text="{Binding ErrorMessage}" 
                            Foreground="#f38ba8" 
                            IsVisible="{Binding ErrorMessage, Converter={x:Static StringConverters.IsNotNullOrEmpty}}" 
