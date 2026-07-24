@@ -48,6 +48,22 @@ public class MessageServer {
         Console.WriteLine("Listen started");
         Task sweepTask = router.StartUnsentSweepAsync(ct);
 
+        _ = Task.Run(async () => {
+            while (!ct.IsCancellationRequested) {
+                try {
+                    string saveDir = Path.Combine(Environment.CurrentDirectory, "FileStorage");
+                    if (Directory.Exists(saveDir)) {
+                        foreach (var file in Directory.GetFiles(saveDir)) {
+                            if (File.GetCreationTimeUtc(file) < DateTime.UtcNow.AddHours(-24)) {
+                                File.Delete(file);
+                            }
+                        }
+                    }
+                } catch { }
+                await Task.Delay(TimeSpan.FromHours(1), ct);
+            }
+        });
+
         while (!ct.IsCancellationRequested) {
             TcpClient client;
             try {
