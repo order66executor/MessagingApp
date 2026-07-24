@@ -14,7 +14,7 @@ public class AppSession
 
     public string? CurrentUsername { get; private set; }
 
-    public async Task<bool> ConnectAsync(string ipAddress, int port, string username)
+    public async Task<bool> ConnectAsync(string ipAddress, int port, string username, bool useTls)
     {
         if (!IPAddress.TryParse(ipAddress, out var address))
         {
@@ -22,8 +22,7 @@ public class AppSession
         }
 
         CurrentUsername = username;
-        // TODO: use tls tickbox
-        Client = new MessageClient(address, port, new ClientProtocolFactory(), username, true);
+        Client = new MessageClient(address, port, new ClientProtocolFactory(), username, useTls);
         Client.DbHandler.OnMessageAdded += (wrapper) => 
         {
             WeakReferenceMessenger.Default.Send(new Messages.NewMessageReceivedMessage(wrapper));
