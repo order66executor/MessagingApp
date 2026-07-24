@@ -142,6 +142,7 @@ public class MessageServer {
         }
         finally {
             handlers.TryRemove(id, out _);
+            tokens.TryRemove(id, out _);
             cts.Cancel();
             await connTask;
         }
