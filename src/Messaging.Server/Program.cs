@@ -13,10 +13,6 @@ public class Program {
 
 
     private static async Task Main(string[] args) {
-        Console.SetOut(new StreamWriter(Console.OpenStandardOutput())
-        {
-            AutoFlush = true
-        });
 
         if (args.Length < 1) {
             Console.WriteLine("At least 1 parameter required for port number");
@@ -35,6 +31,7 @@ public class Program {
             context =>
             {
                 Console.WriteLine("SIGTERM received");
+                Console.Out.Flush();
                 cts.Cancel();
                 context.Cancel = true;
             });
@@ -75,8 +72,11 @@ public class Program {
         } */
 
         await serverTask;
+        Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); 
+
 
         Console.WriteLine("Exiting gracefully");
+        Console.Out.Flush();
 
 
     }
