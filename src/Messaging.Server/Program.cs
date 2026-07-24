@@ -17,6 +17,13 @@ public class Program {
             return;
         }
 
+        Console.CancelKeyPress += (sender, e) => {
+            e.Cancel = true;
+            cts.Cancel();
+        };
+
+        AppDomain.CurrentDomain.ProcessExit += (sender, e) => cts.Cancel();
+
         if (int.TryParse(args[0], out int port)) {
 
             bool tls = !args.Contains("--notls");
