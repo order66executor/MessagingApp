@@ -3,6 +3,7 @@ using Avalonia;
 using Avalonia.Layout;
 using Avalonia.Media;
 using CommunityToolkit.Mvvm.ComponentModel;
+using CommunityToolkit.Mvvm.Input;
 using Messaging.Shared.Models;
 
 namespace Messaging.UI.ViewModels;
@@ -33,7 +34,26 @@ public partial class ChatMessageViewModel : ViewModelBase
         OnPropertyChanged(nameof(BubbleCornerRadius));
     }
 
-    // For later: Attachment info
     [ObservableProperty]
-    private bool _hasAttachment;
+    private bool _isFileNotification;
+
+    [ObservableProperty]
+    private string? _fileId;
+
+    [ObservableProperty]
+    private string? _fileName;
+
+    [ObservableProperty]
+    private string? _fileSizeDisplay;
+
+    public Action<string>? DownloadAction { get; set; }
+
+    [RelayCommand]
+    private void Download()
+    {
+        if (FileId != null && DownloadAction != null)
+        {
+            DownloadAction.Invoke(FileId);
+        }
+    }
 }

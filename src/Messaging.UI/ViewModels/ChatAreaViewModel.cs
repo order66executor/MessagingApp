@@ -55,16 +55,33 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
                 var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.MessageData>(wrapper.SerializedMessageData);
                 if (msgData != null)
                 {
-                    string text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
                     bool isOwn = wrapper.SenderUsername == _appSession.CurrentUsername;
-                    
-                    Messages.Add(new ChatMessageViewModel
+                    var vm = new ChatMessageViewModel
                     {
-                        Text = text,
                         IsOwnMessage = isOwn,
                         Timestamp = msgData.SentAtUtc.ToLocalTime(),
-                        State = wrapper.State
-                    });
+                        State = wrapper.State,
+                        DownloadAction = DownloadFile
+                    };
+
+                    if (msgData.Type == Messaging.Shared.Models.MessageType.TextMessage)
+                    {
+                        vm.Text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
+                    }
+                    else if (msgData.Type == Messaging.Shared.Models.MessageType.FileNotification)
+                    {
+                        var notifPayload = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.FileNotificationPayload>(msgData.Payload);
+                        if (notifPayload != null)
+                        {
+                            vm.IsFileNotification = true;
+                            vm.FileId = notifPayload.FileId;
+                            vm.FileName = notifPayload.FileName;
+                            vm.FileSizeDisplay = $"{notifPayload.FileSize / 1024} KB";
+                            vm.Text = $"📎 {notifPayload.FileName}";
+                        }
+                    }
+                    
+                    Messages.Add(vm);
                 }
             }
         });
@@ -85,16 +102,33 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
                 var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.MessageData>(message.Wrapper.SerializedMessageData);
                 if (msgData != null)
                 {
-                    string text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
                     bool isOwn = message.Wrapper.SenderUsername == _appSession.CurrentUsername;
-                    
-                    Messages.Add(new ChatMessageViewModel
+                    var vm = new ChatMessageViewModel
                     {
-                        Text = text,
                         IsOwnMessage = isOwn,
                         Timestamp = msgData.SentAtUtc.ToLocalTime(),
-                        State = message.Wrapper.State
-                    });
+                        State = message.Wrapper.State,
+                        DownloadAction = DownloadFile
+                    };
+
+                    if (msgData.Type == Messaging.Shared.Models.MessageType.TextMessage)
+                    {
+                        vm.Text = System.Text.Encoding.UTF8.GetString(msgData.Payload);
+                    }
+                    else if (msgData.Type == Messaging.Shared.Models.MessageType.FileNotification)
+                    {
+                        var notifPayload = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.FileNotificationPayload>(msgData.Payload);
+                        if (notifPayload != null)
+                        {
+                            vm.IsFileNotification = true;
+                            vm.FileId = notifPayload.FileId;
+                            vm.FileName = notifPayload.FileName;
+                            vm.FileSizeDisplay = $"{notifPayload.FileSize / 1024} KB";
+                            vm.Text = $"📎 {notifPayload.FileName}";
+                        }
+                    }
+                    
+                    Messages.Add(vm);
                 }
             });
         }
@@ -112,5 +146,38 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
         // TODO: Pass password to backend in auth phase
         // Send to network
         await _appSession.Client.SendTextMessageAsync(PartnerUsername, text);
+    }
+
+    private void DownloadFile(string fileId)
+    {
+        if (_appSession?.Client == null) return;
+        _ = _appSession.Client.RequestFileAsync(fileId);
+    }
+
+    [RelayCommand]
+    private async Task SendFileAsync()
+    {
+        if (string.IsNullOrWhiteSpace(PartnerUsername)) return;
+        if (_appSession?.Client == null) return;
+
+        var topLevel = Avalonia.Application.Current?.ApplicationLifetime is
+            Avalonia.Controls.ApplicationLifetimes.IClassicDesktopStyleApplicationLifetime desktop
+            ? desktop.MainWindow : null;
+
+        if (topLevel == null) return;
+
+        var files = await topLevel.StorageProvider.OpenFilePickerAsync(
+            new Avalonia.Platform.Storage.FilePickerOpenOptions
+            {
+                Title = "Select a file to send",
+                AllowMultiple = false
+            });
+
+        if (files.Count == 0) return;
+
+        string? filePath = files[0].Path.LocalPath;
+        if (filePath == null) return;
+
+        await _appSession.Client.SendFileAsync(PartnerUsername, filePath);
     }
 }
