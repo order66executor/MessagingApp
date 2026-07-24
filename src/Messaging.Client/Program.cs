@@ -1,6 +1,6 @@
 using System.Net;
 using System.Text;
-using System.Text.Json;
+using MessagePack;
 
 using Messaging.Client.Protocols;
 using Messaging.Shared.Data;
@@ -66,7 +66,7 @@ public class Program {
 
                 case "read":
                     foreach (MessageWrapper wrapper in await client.DbHandler.GetMessagesAsync(DbUtil.GetConversationKey(new StringIdentifier(username), new StringIdentifier(parsed[1])))) {
-                        MessageData? message = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+                        MessageData? message = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
                         if (message is not null)
                             Console.WriteLine($"Message ID: {message.Id} sent by: {message.SourceId} at: {message.SentAtUtc}, content: {Encoding.UTF8.GetString(message.Payload)}");
                     }

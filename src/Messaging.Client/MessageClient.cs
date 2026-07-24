@@ -5,7 +5,7 @@ using Messaging.Shared.Models;
 using Messaging.Client.Protocols;
 using Messaging.Client.Services;
 using Messaging.Shared.Services;
-using System.Text.Json;
+using MessagePack;
 using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
@@ -209,7 +209,7 @@ public class MessageClient {
             wrapper.State = MessageState.Pending;
 
             try {
-                MessageData? messageData = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+                MessageData? messageData = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
                 if (messageData is not null && ackHandler is not null) {
                     sendTasks.Add(ackHandler.EnqueueMessageAsync(messageData));
                     Console.WriteLine("Pending message enqueued");

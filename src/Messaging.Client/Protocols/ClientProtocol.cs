@@ -3,7 +3,7 @@ using Messaging.Shared.Protocol;
 using Messaging.Shared.Models;
 
 using System.Text;
-using System.Text.Json;
+using MessagePack;
 using Messaging.Shared.Services;
 
 namespace Messaging.Client.Protocols;
@@ -45,7 +45,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
                 return true;
 
             case MessageType.FileResponse:
-                var resPayload = JsonSerializer.Deserialize<FileResponsePayload>(message.Payload);
+                var resPayload = MessagePackSerializer.Deserialize<FileResponsePayload>(message.Payload);
                 if (resPayload != null) {
                     string downloadsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
                     string savePath = Path.Combine(downloadsDir, resPayload.FileName);
@@ -94,7 +94,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
         // Strip the heavy binary data before saving to local SQLite DB
         if (message.Type == MessageType.FileUpload) {
-            var originalPayload = JsonSerializer.Deserialize<FileUploadPayload>(message.Payload);
+            var originalPayload = MessagePackSerializer.Deserialize<FileUploadPayload>(message.Payload);
             if (originalPayload != null) {
                 var emptyPayload = new FileUploadPayload { 
                     FileName = originalPayload.FileName, 
@@ -106,7 +106,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
                     SourceId = message.SourceId,
                     TargetId = message.TargetId,
                     SentAtUtc = message.SentAtUtc,
-                    Payload = JsonSerializer.SerializeToUtf8Bytes(emptyPayload)
+                    Payload = MessagePackSerializer.Serialize(emptyPayload)
                 };
             }
         }
@@ -128,14 +128,14 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
     public async Task SendFileAsync(StringIdentifier target, string filePath) {
         byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
         var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileData = fileBytes };
-        MessageData message = await CreateMessageDataAsync(MessageType.FileUpload, target, JsonSerializer.SerializeToUtf8Bytes(payload));
+        MessageData message = await CreateMessageDataAsync(MessageType.FileUpload, target, MessagePackSerializer.Serialize(payload));
         await SendAndWaitForAckAsync(message);
     }
 
     public async Task RequestFileAsync(string fileId) {
         var payload = new FileRequestPayload { FileId = fileId };
         // The server needs a way to know who is requesting, so target is SYSTEM, and source is this client
-        MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, new StringIdentifier("SYSTEM"), JsonSerializer.SerializeToUtf8Bytes(payload));
+        MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, new StringIdentifier("SYSTEM"), MessagePackSerializer.Serialize(payload));
         await SendAndWaitForAckAsync(message);
     }
 

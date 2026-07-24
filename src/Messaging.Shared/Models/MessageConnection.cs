@@ -1,6 +1,6 @@
 using System.Net.Sockets;
 using System.Buffers.Binary;
-using System.Text.Json;
+using MessagePack;
 using System.Net.Security;
 
 namespace Messaging.Shared.Models;
@@ -66,7 +66,7 @@ public class MessageConnection {
                 // deserialize from bytes
 
                 try {
-                    data = JsonSerializer.Deserialize<MessageData>(payloadBuffer);
+                    data = MessagePackSerializer.Deserialize<MessageData>(payloadBuffer);
                 }
                 catch (Exception e) {
                     Console.WriteLine($"Deserialization failed: {e.Message}" );
@@ -93,7 +93,7 @@ public class MessageConnection {
     public async Task WriteAsync(MessageData data) {
         // serialize message
 
-        byte[] payload = JsonSerializer.SerializeToUtf8Bytes(data);
+        byte[] payload = MessagePackSerializer.Serialize(data);
         int size = payload.Length;
 
         // write size

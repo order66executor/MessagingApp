@@ -5,6 +5,7 @@ using CommunityToolkit.Mvvm.Input;
 using CommunityToolkit.Mvvm.Messaging;
 using Messaging.UI.Services;
 using Messaging.UI.Messages;
+using MessagePack;
 
 namespace Messaging.UI.ViewModels;
 
@@ -74,7 +75,7 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
 
     private ChatMessageViewModel? CreateChatMessageViewModel(Messaging.Shared.Models.MessageWrapper wrapper)
     {
-        var msgData = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.MessageData>(wrapper.SerializedMessageData);
+        var msgData = MessagePackSerializer.Deserialize<Messaging.Shared.Models.MessageData>(wrapper.SerializedMessageData);
         if (msgData == null || _appSession?.CurrentUsername == null) return null;
 
         bool isOwn = wrapper.SenderUsername == _appSession.CurrentUsername;
@@ -93,7 +94,7 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
                 break;
 
             case Messaging.Shared.Models.MessageType.FileNotification:
-                var notifPayload = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.FileNotificationPayload>(msgData.Payload);
+                var notifPayload = MessagePackSerializer.Deserialize<Messaging.Shared.Models.FileNotificationPayload>(msgData.Payload);
                 if (notifPayload != null)
                 {
                     vm.IsFileNotification = true;
@@ -105,7 +106,7 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
                 break;
 
             case Messaging.Shared.Models.MessageType.FileUpload:
-                var uploadPayload = System.Text.Json.JsonSerializer.Deserialize<Messaging.Shared.Models.FileUploadPayload>(msgData.Payload);
+                var uploadPayload = MessagePackSerializer.Deserialize<Messaging.Shared.Models.FileUploadPayload>(msgData.Payload);
                 vm.Text = uploadPayload != null ? $"📤 {uploadPayload.FileName} (elküldve)" : "📤 Fájl elküldve";
                 break;
 

@@ -1,5 +1,5 @@
 using System.Collections.Concurrent;
-using System.Text.Json;
+using MessagePack;
 using Microsoft.EntityFrameworkCore;
 using Messaging.Server.Data;
 using Messaging.Shared.Models;
@@ -54,7 +54,7 @@ public class MessageRouter  {
     }
 
     private async Task SendWrapperAsync(MessageWrapper wrapper, ServerDbContext db) {
-        MessageData? message = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+        MessageData? message = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
         if (message is null) {
             Console.WriteLine("Message data was null when attempting to send during sweep");
             return;
@@ -98,7 +98,7 @@ public class MessageRouter  {
             SequenceId = message.Id,
             SenderUsername = message.SourceId.Value,
             ReceiverUsername = message.TargetId.Value,
-            SerializedMessageData = JsonSerializer.SerializeToUtf8Bytes(message),
+            SerializedMessageData = MessagePackSerializer.Serialize(message),
             StoredAtUtc = DateTime.UtcNow,
             State = MessageState.Pending
         };
@@ -158,7 +158,7 @@ public class MessageRouter  {
 
         foreach (var wrapper in pendingMessages) {
             try {
-                MessageData? messageData = JsonSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+                MessageData? messageData = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
                 if (messageData != null) {
                     sendTasks.Add(AckHandler.EnqueueMessageAsync(messageData));
                     Console.WriteLine("Pending message enqueued");

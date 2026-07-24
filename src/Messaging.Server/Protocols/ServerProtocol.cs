@@ -3,7 +3,7 @@ using Messaging.Shared.Protocol;
 
 using System.Collections.Concurrent;
 using System.Text;
-using System.Text.Json;
+using MessagePack;
 using Messaging.Server.Services;
 
 namespace Messaging.Server.Protocols;
@@ -33,7 +33,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
 
             case MessageType.FileUpload:
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? uploadHandler)) {
-                    var uploadPayload = JsonSerializer.Deserialize<FileUploadPayload>(message.Payload);
+                    var uploadPayload = MessagePackSerializer.Deserialize<FileUploadPayload>(message.Payload);
                     if (uploadPayload != null) {
                         string fileId = Guid.NewGuid().ToString();
                         string saveDir = Path.Combine(Environment.CurrentDirectory, "FileStorage");
@@ -45,7 +45,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                         
                         // Send Notification to the receiver
                         var notifPayload = new FileNotificationPayload { FileId = fileId, FileName = sanitizedFileName, FileSize = uploadPayload.FileData.Length };
-                        MessageData notifMsg = new() { Id = message.Id, Type = MessageType.FileNotification, SourceId = message.SourceId, TargetId = message.TargetId, SentAtUtc = DateTime.UtcNow, Payload = JsonSerializer.SerializeToUtf8Bytes(notifPayload) };
+                        MessageData notifMsg = new() { Id = message.Id, Type = MessageType.FileNotification, SourceId = message.SourceId, TargetId = message.TargetId, SentAtUtc = DateTime.UtcNow, Payload = MessagePackSerializer.Serialize(notifPayload) };
                         _ = router.RouteMessageAsync(notifMsg);
                     }
                     try {
@@ -59,7 +59,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
             case MessageType.FileRequest:
                 Console.WriteLine("File request received");
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? requestHandler)) {
-                    var reqPayload = JsonSerializer.Deserialize<FileRequestPayload>(message.Payload);
+                    var reqPayload = MessagePackSerializer.Deserialize<FileRequestPayload>(message.Payload);
                     if (reqPayload != null) {
                         string saveDir = Path.Combine(Environment.CurrentDirectory, "FileStorage");
                         var filePath = Directory.GetFiles(saveDir, $"{reqPayload.FileId}_*").FirstOrDefault();
@@ -68,7 +68,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                             string fileName = Path.GetFileName(filePath).Substring(reqPayload.FileId.Length + 1);
                             
                             var resPayload = new FileResponsePayload { FileId = reqPayload.FileId, FileName = fileName, FileData = fileData };
-                            MessageData resMsg = new() { Id = message.Id, Type = MessageType.FileResponse, SourceId = new("SYSTEM"), TargetId = message.SourceId, SentAtUtc = DateTime.UtcNow, Payload = JsonSerializer.SerializeToUtf8Bytes(resPayload) };
+                            MessageData resMsg = new() { Id = message.Id, Type = MessageType.FileResponse, SourceId = new("SYSTEM"), TargetId = message.SourceId, SentAtUtc = DateTime.UtcNow, Payload = MessagePackSerializer.Serialize(resPayload) };
                             _ = router.RouteMessageAsync(resMsg);
                         }
                     }

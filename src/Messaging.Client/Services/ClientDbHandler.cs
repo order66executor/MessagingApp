@@ -1,4 +1,4 @@
-using System.Text.Json;
+using MessagePack;
 
 using Messaging.Client.Data;
 using Messaging.Shared.Data;
@@ -35,7 +35,7 @@ public class ClientDbHandler {
             SequenceId = message.Id,
             SenderUsername = message.SourceId.Value,
             ReceiverUsername = message.TargetId.Value,
-            SerializedMessageData = JsonSerializer.SerializeToUtf8Bytes(message),
+            SerializedMessageData = MessagePackSerializer.Serialize(message),
             StoredAtUtc = DateTime.UtcNow,
             State = state
         };
