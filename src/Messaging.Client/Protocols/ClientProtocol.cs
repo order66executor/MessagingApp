@@ -55,22 +55,34 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
     }
 
-    public async Task SendTextMessageAsync(StringIdentifier target, string text) {
+    private async Task<MessageData> CreateMessageDataAsync(MessageType type, StringIdentifier target, byte[] payload) {
         MessageData message = new() {
             Id = await dbHandler.GetHighestSequenceIdAsync(target) + 1,
-            Type = MessageType.TextMessage,
+            Type = type,
             SourceId = identifier,
             TargetId = target,
             SentAtUtc = DateTime.UtcNow,
-            Payload = Encoding.UTF8.GetBytes(text)
+            Payload = payload
         };
 
+
+        return message;
+        
+    }
+
+    private async Task SendAndWaitForAckAsync(MessageData message) {
         var wrapper = await dbHandler.PlaceMessageAsync(message, MessageState.Pending);
         bool result = await ackHandler.EnqueueMessageAsync(message);
 
         if (result) Console.WriteLine("Setting message state to sent");
 
         await dbHandler.UpdateMessageStateAsync(wrapper.Id, result ? MessageState.Sent : MessageState.Unsent);
+
+    }
+
+    public async Task SendTextMessageAsync(StringIdentifier target, string text) {
+        MessageData message = await CreateMessageDataAsync(MessageType.TextMessage, target, Encoding.UTF8.GetBytes(text));
+        await SendAndWaitForAckAsync(message);
     }
 
 }

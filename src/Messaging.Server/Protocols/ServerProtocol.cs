@@ -30,8 +30,8 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 router.AckHandler.SubmitAck(message);
                 return true;
             
-            case MessageType.TextMessage:
-                Console.WriteLine($"Text message with ID: {message.Id} received from: {message.SourceId} to: {message.TargetId} sent at: {message.SentAtUtc} content: {Encoding.UTF8.GetString(message.Payload)}");
+            default:
+                Console.WriteLine($"Message with ID: {message.Id} received from: {message.SourceId} to: {message.TargetId} sent at: {message.SentAtUtc}");
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler)) {
                     try {
                         await EnqueueAck(handler, new("SYSTEM"), message.TargetId, message.Id);
@@ -52,8 +52,6 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                 else Console.WriteLine("Message already acked, discarding");
                 return true;
             
-            default:
-                return false;
         }
     }
 
