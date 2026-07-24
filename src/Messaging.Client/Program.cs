@@ -15,8 +15,8 @@ public class Program {
 
     private static readonly CancellationTokenSource cts = new();
     public static async Task Main(string[] args) {
-        if (args.Length != 2) {
-            Console.WriteLine("Exactly 2 parameters required");
+        if (args.Length < 2) {
+            Console.WriteLine("At least 2 parameters required");
             return;
         }
 

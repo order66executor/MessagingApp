@@ -132,8 +132,8 @@ public class AckWaitHandler {
                 tcs.TrySetResult(result);
             }
         }
-        catch(OperationCanceledException) when (!ct.IsCancellationRequested) {
-            Console.WriteLine("Ack waiting has cancelled not by token");
+        catch(OperationCanceledException) {
+            Console.WriteLine("Ack waiting has cancelled");
         }
         finally {
             while (buffer.Reader.TryRead(out var message)) {
