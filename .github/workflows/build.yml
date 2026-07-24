@@ -46,13 +46,13 @@ jobs:
         if: matrix.project.name == 'Server'
         uses: appleboy/scp-action@v1
         with:
-          host: "[${{ secrets.SERVER_HOST }}]"
+          host: ${{ secrets.SERVER_HOST }}
           username: ${{ secrets.SERVER_USER }}
           key: ${{ secrets.SSH_KEY }}
           port: ${{ secrets.SSH_PORT }}
+          protocol: tcp6
           source: "publish/Server/*"
           target: "/opt/deploy/"
-          strip_prefix: "publish/Server"
           overwrite: true
 
      # - name: Restart Service
