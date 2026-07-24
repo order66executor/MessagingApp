@@ -13,6 +13,9 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
 
     private readonly MessageRouter router;
+    private long _serverMessageIdCounter = 0;
+
+    private long NextServerMessageId() => Interlocked.Increment(ref _serverMessageIdCounter);
 
     public ServerProtocol(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, MessageRouter router) {
         this.handlers = handlers;
@@ -38,13 +41,14 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                         string fileId = Guid.NewGuid().ToString();
                         string saveDir = Path.Combine(Environment.CurrentDirectory, "FileStorage");
                         Directory.CreateDirectory(saveDir);
-                        string savePath = Path.Combine(saveDir, $"{fileId}_{uploadPayload.FileName}");
+                        string sanitizedFileName = Path.GetFileName(uploadPayload.FileName);
+                        string savePath = Path.Combine(saveDir, $"{fileId}_{sanitizedFileName}");
                         
                         await File.WriteAllBytesAsync(savePath, uploadPayload.FileData);
                         
                         // Send Notification to the receiver
-                        var notifPayload = new FileNotificationPayload { FileId = fileId, FileName = uploadPayload.FileName, FileSize = uploadPayload.FileData.Length };
-                        MessageData notifMsg = new() { Id = 0, Type = MessageType.FileNotification, SourceId = message.SourceId, TargetId = message.TargetId, SentAtUtc = DateTime.UtcNow, Payload = JsonSerializer.SerializeToUtf8Bytes(notifPayload) };
+                        var notifPayload = new FileNotificationPayload { FileId = fileId, FileName = sanitizedFileName, FileSize = uploadPayload.FileData.Length };
+                        MessageData notifMsg = new() { Id = NextServerMessageId(), Type = MessageType.FileNotification, SourceId = message.SourceId, TargetId = message.TargetId, SentAtUtc = DateTime.UtcNow, Payload = JsonSerializer.SerializeToUtf8Bytes(notifPayload) };
                         _ = router.RouteMessageAsync(notifMsg);
                     }
                     try {
@@ -66,7 +70,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                             string fileName = Path.GetFileName(filePath).Substring(reqPayload.FileId.Length + 1);
                             
                             var resPayload = new FileResponsePayload { FileId = reqPayload.FileId, FileName = fileName, FileData = fileData };
-                            MessageData resMsg = new() { Id = 0, Type = MessageType.FileResponse, SourceId = new("SYSTEM"), TargetId = message.SourceId, SentAtUtc = DateTime.UtcNow, Payload = JsonSerializer.SerializeToUtf8Bytes(resPayload) };
+                            MessageData resMsg = new() { Id = NextServerMessageId(), Type = MessageType.FileResponse, SourceId = new("SYSTEM"), TargetId = message.SourceId, SentAtUtc = DateTime.UtcNow, Payload = JsonSerializer.SerializeToUtf8Bytes(resPayload) };
                             _ = router.RouteMessageAsync(resMsg);
                         }
                     }
