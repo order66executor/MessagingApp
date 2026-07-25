@@ -33,6 +33,11 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
 
             case MessageType.FileUpload:
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? uploadHandler)) {
+                    try {
+                        await EnqueueAck(uploadHandler, new("SYSTEM"), message.TargetId, message.Id);
+                    } catch (Exception e) {
+                        Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
+                    }
                     var uploadPayload = MessagePackSerializer.Deserialize<FileUploadPayload>(message.Payload);
                     if (uploadPayload != null) {
                         string fileId = Guid.NewGuid().ToString();
@@ -48,17 +53,17 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                         MessageData notifMsg = new() { Id = message.Id, Type = MessageType.FileNotification, SourceId = message.SourceId, TargetId = message.TargetId, SentAtUtc = DateTime.UtcNow, Payload = MessagePackSerializer.Serialize(notifPayload) };
                         _ = router.RouteMessageAsync(notifMsg);
                     }
-                    try {
-                        await EnqueueAck(uploadHandler, new("SYSTEM"), message.TargetId, message.Id);
-                    } catch (Exception e) {
-                        Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
-                    }
                 }
                 return true;
 
             case MessageType.FileRequest:
                 Console.WriteLine("File request received");
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? requestHandler)) {
+                    try {
+                        await EnqueueAck(requestHandler, message.SourceId, new("SYSTEM"), message.Id);
+                    } catch (Exception e) {
+                        Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
+                    }
                     var reqPayload = MessagePackSerializer.Deserialize<FileRequestPayload>(message.Payload);
                     if (reqPayload != null) {
                         string saveDir = Path.Combine(Environment.CurrentDirectory, "FileStorage");
@@ -71,11 +76,6 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                             MessageData resMsg = new() { Id = message.Id, Type = MessageType.FileResponse, SourceId = new("SYSTEM"), TargetId = message.SourceId, SentAtUtc = DateTime.UtcNow, Payload = MessagePackSerializer.Serialize(resPayload) };
                             _ = router.RouteMessageAsync(resMsg);
                         }
-                    }
-                    try {
-                        await EnqueueAck(requestHandler, message.SourceId, new("SYSTEM"), message.Id);
-                    } catch (Exception e) {
-                        Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
                     }
                 }
                 return true;

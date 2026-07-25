@@ -115,7 +115,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
             wrapper = await dbHandler.PlaceMessageAsync(messageToSave, MessageState.Pending);
         bool result = await ackHandler.EnqueueMessageAsync(message); // Send the ORIGINAL message with full data
 
-        if (result) Console.WriteLine("Setting message state to sent");
+        if (result) Console.WriteLine($"Ack arrived for {message.Id} to {message.TargetId}");
 
         if (saveToDb && wrapper is not null) 
             await dbHandler.UpdateMessageStateAsync(wrapper.Id, result ? MessageState.Sent : MessageState.Unsent);
