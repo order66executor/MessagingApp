@@ -41,34 +41,47 @@ public class MessageClient {
         this.useTls = useTls;
     }
 
+    private async Task<bool> TryConnectAsync(CancellationToken ct) {
+        try {
+            Console.WriteLine("Attempting connection");
+            await client.ConnectAsync(address, port, ct);
+        }
+        catch (Exception e) {
+            Console.WriteLine($"Connection failed: {e.Message}");
+            client.Dispose();
+            return false;
+        }
+
+        return true;
+    }
+
     // Connects and introduces to server, then starts listening for incoming and outgoing messages
     public async Task RunAsync(CancellationTokenSource cts) {
         CancellationToken ct = cts.Token;
         CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         StringIdentifier selfId = new(username);
+        using CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
+        introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         // Connect
-        try {
-            Console.WriteLine("Attempting connection");
-            await client.ConnectAsync(address, port);
-        }
-        catch (Exception e) {
-            Console.WriteLine($"Connection failed: {e.Message}");
-            client.Dispose();
+        if (!await TryConnectAsync(introCts.Token))
             return;
-        }
+
+        introCts.TryReset();
 
         Console.WriteLine("Connection successful");
         conn = new(client, useTls, linked.Token);
-        using CancellationTokenSource tlsCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
-        tlsCts.CancelAfter(TimeSpan.FromSeconds(5));
+
+        introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         if (useTls) {
-            if (!await AuthTlsAsync(tlsCts.Token))
+            if (!await AuthTlsAsync(introCts.Token))
                 return;
             Console.WriteLine("TLS authentication successful");
         }
+
+        introCts.TryReset();
 
         // Start the connection's incoming listener
         Task connTask = conn.StartAsync();
@@ -89,7 +102,6 @@ public class MessageClient {
         }
 
         //Cancel waiting for ack after 5 seconds
-        CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
         introCts.CancelAfter(5000);
 
         bool response = false;
@@ -240,6 +252,12 @@ public class MessageClient {
         if (realPendingMessages.Count > 0) {
             Console.WriteLine($"Delivered {success} pending messages, failed {failure}");
         }
+        
+
+
+    }
+
+    public async Task<bool> TryRegisterAsync() {
         
 
 

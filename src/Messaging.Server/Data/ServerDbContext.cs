@@ -8,8 +8,9 @@ namespace Messaging.Server.Data;
 public class ServerDbContext : DbContextBase {
     public DbSet<MessageWrapper> Messages { get; set; }
     public DbSet<DbAckCounter> HighestAcks { get; set; }
+    public DbSet<Account> Accounts { get; set; }
 
-    public ServerDbContext(string dbPath = "server_messaging.db") : base(dbPath) {
+    public ServerDbContext(string dbPath) : base(dbPath) {
 
     }
 
@@ -24,7 +25,12 @@ public class ServerDbContext : DbContextBase {
         modelBuilder.Entity<DbAckCounter>(entity => {
             entity.HasKey(e => e.Id);
             entity.HasIndex(e => new {e.ConversationKey, e.SenderUsername}).IsUnique();
-            }
-        );
+        });
+
+        modelBuilder.Entity<Account>(entity => {
+            entity.HasKey(e => e.Id);
+            entity.HasIndex(e => e.Username).IsUnique();
+        });
+
     }
 }

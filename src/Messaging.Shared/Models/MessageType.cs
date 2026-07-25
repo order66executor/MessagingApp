@@ -1,8 +1,10 @@
 namespace Messaging.Shared.Models;
 
 public enum MessageType {
-    Introduction,
+    Login,
+    Register,
     Ack,
+    Nack,
     TextMessage,
     FileUpload,
     FileNotification,

@@ -62,17 +62,19 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
         }
     }
 
-    public MessageData CreateIntroduction() {
-        return new() {
+    public MessageData CreateAccountMessage(string password, MessageType type) {
+        return type is not (MessageType.Login or MessageType.Register)
+            ? throw new ArgumentException("Type is incorrect for account-related messages")
+            : new() {
             Id = 0,
-            Type = MessageType.Introduction,
+            Type = type,
             SourceId = identifier,
             TargetId = new StringIdentifier("SYSTEM"),
             SentAtUtc = DateTime.UtcNow,
-            Payload = Encoding.UTF8.GetBytes("Hello")
+            Payload = Encoding.UTF8.GetBytes(password)
         };
-
     }
+
 
     private async Task<MessageData> CreateMessageDataAsync(MessageType type, StringIdentifier target, byte[] payload) {
         MessageData message = new() {
