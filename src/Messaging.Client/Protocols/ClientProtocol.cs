@@ -89,7 +89,7 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
         
     }
 
-    private async Task SendAndWaitForAckAsync(MessageData message) {
+    private async Task SendAndWaitForAckAsync(MessageData message, bool saveToDb) {
         MessageData messageToSave = message;
 
         // Strip the heavy binary data before saving to local SQLite DB
@@ -110,33 +110,35 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
                 };
             }
         }
-
-        var wrapper = await dbHandler.PlaceMessageAsync(messageToSave, MessageState.Pending);
+        MessageWrapper? wrapper = null;
+        if (saveToDb) 
+            wrapper = await dbHandler.PlaceMessageAsync(messageToSave, MessageState.Pending);
         bool result = await ackHandler.EnqueueMessageAsync(message); // Send the ORIGINAL message with full data
 
         if (result) Console.WriteLine("Setting message state to sent");
 
-        await dbHandler.UpdateMessageStateAsync(wrapper.Id, result ? MessageState.Sent : MessageState.Unsent);
+        if (saveToDb && wrapper is not null) 
+            await dbHandler.UpdateMessageStateAsync(wrapper.Id, result ? MessageState.Sent : MessageState.Unsent);
 
     }
 
     public async Task SendTextMessageAsync(StringIdentifier target, string text) {
         MessageData message = await CreateMessageDataAsync(MessageType.TextMessage, target, Encoding.UTF8.GetBytes(text));
-        await SendAndWaitForAckAsync(message);
+        await SendAndWaitForAckAsync(message, true);
     }
 
     public async Task SendFileAsync(StringIdentifier target, string filePath) {
         byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
         var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileData = fileBytes };
         MessageData message = await CreateMessageDataAsync(MessageType.FileUpload, target, MessagePackSerializer.Serialize(payload));
-        await SendAndWaitForAckAsync(message);
+        await SendAndWaitForAckAsync(message, true);
     }
 
     public async Task RequestFileAsync(string fileId) {
         var payload = new FileRequestPayload { FileId = fileId };
         // The server needs a way to know who is requesting, so target is SYSTEM, and source is this client
         MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, new StringIdentifier("SYSTEM"), MessagePackSerializer.Serialize(payload));
-        await SendAndWaitForAckAsync(message);
+        await SendAndWaitForAckAsync(message, false);
     }
 
 }

@@ -11,7 +11,7 @@ namespace Messaging.Server.Services;
 public class MessageRouter  {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
     private readonly string dbPath;
-    private static readonly TimeSpan sweepInterval = TimeSpan.FromSeconds(3);
+    private static readonly TimeSpan sweepInterval = TimeSpan.FromSeconds(10);
     public AckWaitHandler AckHandler { get; }
 
     public MessageRouter(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, AckWaitHandler ackHandler, string dbPath = "messaging_server.db") {

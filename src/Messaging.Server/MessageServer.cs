@@ -182,7 +182,7 @@ public class MessageServer {
         }
     }
 
-    public async Task<bool> ServerAuthTlsAsync(MessageConnection conn, CancellationToken ct) {
+    public static async Task<bool> ServerAuthTlsAsync(MessageConnection conn, CancellationToken ct) {
         // get pfx location and password from evnrionment variables
         string password = Environment.GetEnvironmentVariable("PFX_PASSWORD") ?? throw new InvalidOperationException("PFX_PASSWORD is not set");
         string certificatePath = Environment.GetEnvironmentVariable("PFX_LOCATION") ?? throw new InvalidOperationException("PFX_LOCATION is not set");
