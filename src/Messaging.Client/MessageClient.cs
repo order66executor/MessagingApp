@@ -35,7 +35,7 @@ public class MessageClient {
         this.address = address;
         this.port = port;
         this.factory = factory;
-        client = new(AddressFamily.InterNetworkV6);
+        client = new(AddressFamily.InterNetwork);
         this.username = username;
         DbHandler = new();
         this.useTls = useTls;
@@ -61,9 +61,11 @@ public class MessageClient {
 
         Console.WriteLine("Connection successful");
         conn = new(client, useTls, linked.Token);
+        using CancellationTokenSource tlsCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
+        tlsCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         if (useTls) {
-            if (!await AuthTlsAsync())
+            if (!await AuthTlsAsync(tlsCts.Token))
                 return;
             Console.WriteLine("TLS authentication successful");
         }
@@ -71,8 +73,9 @@ public class MessageClient {
         // Start the connection's incoming listener
         Task connTask = conn.StartAsync();
 
-        handler = new(conn, linked);
-        handler.UserId = new("SYSTEM");
+        handler = new(conn, linked) {
+            UserId = new("SYSTEM")
+        };
         ackHandler = new(handler, true, linked.Token);
         protocol = factory.CreateProtocol(selfId, handler, DbHandler, ackHandler);
 
@@ -138,7 +141,7 @@ public class MessageClient {
         cts.Cancel();
     }
 
-    private async Task<bool> AuthTlsAsync() {
+    private async Task<bool> AuthTlsAsync(CancellationToken ct) {
         if (conn is null) {
             Console.WriteLine("Conn is null when authenticating");
             return false;
@@ -156,7 +159,7 @@ public class MessageClient {
             return false;
         }
         using var ms = new MemoryStream();
-        await stream.CopyToAsync(ms);
+        await stream.CopyToAsync(ms, ct);
 
         // load certificate from bytes
         var ca = X509CertificateLoader.LoadCertificate(ms.ToArray());
@@ -172,7 +175,7 @@ public class MessageClient {
                     RevocationMode = X509RevocationMode.NoCheck
                 }
 
-            });
+            }, ct);
         }
         catch (Exception e) {
             Console.WriteLine($"Error authenticating: {e.Message}");

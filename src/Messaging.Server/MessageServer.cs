@@ -31,7 +31,7 @@ public class MessageServer {
 
     public MessageServer(int port, IServerMessageProtocolFactory factory, bool useTls, CancellationToken ct) {
         Port = port;
-        listener = new(IPAddress.IPv6Any, Port);
+        listener = new(IPAddress.Any, Port);
         this.useTls = useTls;
         handlers = new();
         tokens = new();
@@ -111,18 +111,22 @@ public class MessageServer {
 
         MessageConnection conn = new(client, useTls, linked.Token);
 
+        using CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
+        introCts.CancelAfter(TimeSpan.FromSeconds(5));
+
         if (useTls) {
-            if (!await ServerAuthTlsAsync(conn))
+            if (!await ServerAuthTlsAsync(conn, introCts.Token))
                 return;
             Console.WriteLine("TLS authentication successful");
         }
+
+        introCts.TryReset();
+        introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         Task connTask;
 
         connTask = conn.StartAsync();
 
-        using CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
-        introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         //Handle introduction
 
@@ -178,7 +182,7 @@ public class MessageServer {
         }
     }
 
-    public async Task<bool> ServerAuthTlsAsync(MessageConnection conn) {
+    public async Task<bool> ServerAuthTlsAsync(MessageConnection conn, CancellationToken ct) {
         // get pfx location and password from evnrionment variables
         string password = Environment.GetEnvironmentVariable("PFX_PASSWORD") ?? throw new InvalidOperationException("PFX_PASSWORD is not set");
         string certificatePath = Environment.GetEnvironmentVariable("PFX_LOCATION") ?? throw new InvalidOperationException("PFX_LOCATION is not set");
