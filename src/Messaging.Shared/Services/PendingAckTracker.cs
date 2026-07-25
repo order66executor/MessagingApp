@@ -8,7 +8,7 @@ public class PendingAckTracker {
     private readonly ConcurrentDictionary<(long Id, StringIdentifier Target), TaskCompletionSource<bool>> pendingMessages;
     private readonly CancellationToken ct;
 
-    private static readonly TimeSpan waitLength = TimeSpan.FromSeconds(5);
+    private static readonly TimeSpan waitLength = TimeSpan.FromSeconds(30);
 
     public PendingAckTracker(CancellationToken ct) {
         pendingMessages = new();
@@ -34,7 +34,7 @@ public class PendingAckTracker {
     //complete waiting for key
     public void Complete((long Id, StringIdentifier Target) key) {
         if(!pendingMessages.TryGetValue(key, out var result))
-            Console.WriteLine("Ack wait cannot be completed, no such dict entry");
+            Console.WriteLine($"Ack wait cannot be completed, no such dict entry {key.Target}");
         
         if (result is null) return;
         result.TrySetResult(true);
