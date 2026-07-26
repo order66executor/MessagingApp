@@ -8,4 +8,6 @@ public interface IMessageProtocol {
 
     MessageData CreateAck(StringIdentifier source, StringIdentifier target, long idToAck);
 
+    MessageData CreateNack(StringIdentifier source, StringIdentifier target, long idToNack, string reason);
+
 }

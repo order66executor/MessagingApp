@@ -9,6 +9,9 @@ using System.Net.Security;
 using Microsoft.EntityFrameworkCore.Diagnostics;
 using System.Security.Cryptography.X509Certificates;
 using System.Security.Authentication;
+using Messaging.Server.Data;
+using System.Text;
+using System.ComponentModel;
 
 
 namespace Messaging.Server;
@@ -28,6 +31,7 @@ public class MessageServer {
     private readonly MessageRouter router;
     private readonly ConcurrentDictionary<StringIdentifier, CancellationToken> tokens;
     private readonly CancellationToken ct;
+    private readonly AccountDbHandler accDbHandler;
 
     public MessageServer(int port, IServerMessageProtocolFactory factory, bool useTls, CancellationToken ct) {
         Port = port;
@@ -41,7 +45,9 @@ public class MessageServer {
         protocol = factory.CreateProtocol(0, handlers, router);
         tasks = [ ];
         this.ct = ct;
+        accDbHandler = new();
     }
+
 
     public async Task RunAsync() {
         listener.Start();
@@ -106,8 +112,7 @@ public class MessageServer {
         
     // Handle introduction then start processing incoming and outgoing
     private async Task HandleConnectionAsync(TcpClient client, CancellationToken ct) {
-        using CancellationTokenSource cts = new();
-        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct, cts.Token);
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
         MessageConnection conn = new(client, useTls, linked.Token);
 
@@ -131,7 +136,7 @@ public class MessageServer {
         //Handle introduction
 
         bool introduced;
-        MessageConnectionHandler handler = new(conn, linked);
+        MessageConnectionHandler handler = new(conn, linked.Token);
 
         try {
             await handler.WaitForIncomingAsync(introCts.Token);
@@ -144,7 +149,7 @@ public class MessageServer {
 
         if (!introduced) {
             Console.WriteLine("Introduction not received or operation cancelled");
-            cts.Cancel();
+            linked.Cancel();
             await connTask;
             return;
         }
@@ -152,10 +157,47 @@ public class MessageServer {
         introCts.TryReset();
         introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
-        StringIdentifier id = protocol.ReceiveIntroduction(await handler.ReadOneIncomingAsync(introCts.Token));
+        MessageData firstMessage = await handler.ReadOneIncomingAsync(introCts.Token);
+
+        StringIdentifier id = protocol.ReceiveIntroduction(firstMessage);
+        string password = Encoding.UTF8.GetString(firstMessage.Payload);
+
+        bool loginSuccess;
+        string rejectReason = "";
+        
+        switch (firstMessage.Type) {
+            case MessageType.Register:
+                loginSuccess = await accDbHandler.RegisterUserAsync(id.Value, password);
+                if (!loginSuccess) rejectReason = "User already exists";
+                break;
+
+            case MessageType.Login:
+                try {
+                    loginSuccess = await accDbHandler.ValidatePasswordAsync(id.Value, password);
+                    if (!loginSuccess) rejectReason = "Invalid password";
+                }
+                catch (InvalidOperationException) {
+                    loginSuccess = false;
+                    rejectReason = "User does not exist";
+                }
+                break;
+                
+            default:
+                loginSuccess = false;
+                break;
+        }
+
+        if (!loginSuccess) {
+            Console.WriteLine($"Unsuccessful login/register, reason: {rejectReason}");
+            await conn.WriteAsync(protocol.CreateNack(new("SYSTEM"), id, 0, rejectReason));
+            linked.Cancel();
+            await connTask;
+            return;
+        }
+
         tokens.TryAdd(id, linked.Token);
 
-        Console.WriteLine($"Introduction received, ID: {id.Value}");
+        Console.WriteLine($"Login successful, ID: {id.Value}");
 
         handler.UserId = id;
 
@@ -166,7 +208,6 @@ public class MessageServer {
         try {
             Console.WriteLine("Replying ack");
             await handler.WriteToOutBufferAsync(protocol.CreateAck(new StringIdentifier("SYSTEM"), id, 0));
-            Console.WriteLine("Ack added to buffer");
             // start listening for incoming and outgoing
             handlerTask = handler.StartProcessingAsync(protocol);
             // deliver pending messages
@@ -177,7 +218,7 @@ public class MessageServer {
         finally {
             handlers.TryRemove(id, out _);
             tokens.TryRemove(id, out _);
-            cts.Cancel();
+            linked.Cancel();
             await connTask;
         }
     }

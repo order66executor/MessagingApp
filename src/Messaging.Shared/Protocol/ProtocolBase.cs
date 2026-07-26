@@ -1,3 +1,5 @@
+using System.Text;
+
 using Messaging.Shared.Models;
 
 namespace Messaging.Shared.Protocol;
@@ -22,5 +24,16 @@ public abstract class ProtocolBase : IMessageProtocol {
         };
 
         return message;
+    }
+
+    public virtual MessageData CreateNack(StringIdentifier source, StringIdentifier target, long idToNack, string reason = "") {
+        return new() {
+            Id = idToNack,
+            Type = MessageType.Nack,
+            SourceId = source,
+            TargetId = target,
+            SentAtUtc = DateTime.UtcNow,
+            Payload = Encoding.UTF8.GetBytes(reason)
+        };
     }
 }

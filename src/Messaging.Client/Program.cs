@@ -1,3 +1,4 @@
+using System.ComponentModel;
 using System.Net;
 using System.Text;
 using MessagePack;
@@ -15,34 +16,40 @@ public class Program {
 
     private static readonly CancellationTokenSource cts = new();
     public static async Task Main(string[] args) {
+
         if (args.Length < 2) {
             Console.WriteLine("At least 2 parameters required");
             return;
         }
 
-        if (int.TryParse(args[1], out int port) && IPAddress.TryParse(args[0], out IPAddress? address)) {
-            Console.Write("Enter username: ");
 
+        if (int.TryParse(args[1], out int port) && IPAddress.TryParse(args[0], out IPAddress? address)) {
             bool tls = !args.Contains("--notls");
 
+            Console.Write("Enter username: ");
             username = Console.ReadLine();
 
             if (string.IsNullOrWhiteSpace(username))
-            {
                 throw new InvalidOperationException("Username is required.");
-            }
 
-            client = new(address, port, new ClientProtocolFactory(), username, tls);
+            Console.WriteLine("Enter password: ");
+            string? password = Console.ReadLine();
+
+            if (string.IsNullOrWhiteSpace(password))
+                throw new InvalidOperationException("Password is required.");
+
+
+            client = new(address, port, new ClientProtocolFactory(), username, password, tls);
         }
         else {
             Console.WriteLine("Invalid port number or address");
             return;
         }
         Console.WriteLine("Starting client");
-        Task clientTask = client.RunAsync(cts);
+        Task clientTask = client.RunAsync(cts.Token);
         Console.WriteLine("Client started");  
 
-        while (!cts.IsCancellationRequested) {
+        while (!cts.IsCancellationRequested && !clientTask.IsCompleted) {
             string? input;
             var readTask = Task.Run(Console.ReadLine);
             if (await Task.WhenAny(readTask, Task.Delay(Timeout.Infinite, cts.Token)) == readTask)

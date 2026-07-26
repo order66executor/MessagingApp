@@ -126,21 +126,21 @@ public class ClientProtocol : ProtocolBase, IClientMessageProtocol {
 
     public async Task SendTextMessageAsync(StringIdentifier target, string text) {
         MessageData message = await CreateMessageDataAsync(MessageType.TextMessage, target, Encoding.UTF8.GetBytes(text));
-        await SendAndWaitForAckAsync(message, true);
+        await SendAndWaitForAckAsync(message, saveToDb: true);
     }
 
     public async Task SendFileAsync(StringIdentifier target, string filePath) {
         byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
         var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileData = fileBytes };
         MessageData message = await CreateMessageDataAsync(MessageType.FileUpload, target, MessagePackSerializer.Serialize(payload));
-        await SendAndWaitForAckAsync(message, true);
+        await SendAndWaitForAckAsync(message, saveToDb: true);
     }
 
     public async Task RequestFileAsync(string fileId) {
         var payload = new FileRequestPayload { FileId = fileId };
         // The server needs a way to know who is requesting, so target is SYSTEM, and source is this client
         MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, new StringIdentifier("SYSTEM"), MessagePackSerializer.Serialize(payload));
-        await SendAndWaitForAckAsync(message, false);
+        await SendAndWaitForAckAsync(message, saveToDb: false);
     }
 
 }

@@ -10,6 +10,7 @@ using System.Net.Security;
 using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
+using System.Text;
 
 namespace Messaging.Client;
 
@@ -26,21 +27,23 @@ public class MessageClient {
 
     private MessageConnection? conn;
     private MessageConnectionHandler? handler;
-    private readonly string username;
-
+    private readonly StringIdentifier username;
+    private readonly string password;
     public ClientDbHandler DbHandler { get; }
     private AckWaitHandler? ackHandler;
 
-    public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username, bool useTls) {
+    public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username, string password, bool useTls) {
         this.address = address;
         this.port = port;
         this.factory = factory;
         client = new(AddressFamily.InterNetwork);
-        this.username = username;
+        this.username = new(username);
+        this.password = password;
         DbHandler = new();
         this.useTls = useTls;
     }
 
+    // Attempt connecting to server
     private async Task<bool> TryConnectAsync(CancellationToken ct) {
         try {
             Console.WriteLine("Attempting connection");
@@ -56,11 +59,9 @@ public class MessageClient {
     }
 
     // Connects and introduces to server, then starts listening for incoming and outgoing messages
-    public async Task RunAsync(CancellationTokenSource cts) {
-        CancellationToken ct = cts.Token;
-        CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
+    public async Task RunAsync(CancellationToken ct, bool registering = false) {
+        using CancellationTokenSource linked = CancellationTokenSource.CreateLinkedTokenSource(ct);
 
-        StringIdentifier selfId = new(username);
         using CancellationTokenSource introCts = CancellationTokenSource.CreateLinkedTokenSource(linked.Token);
         introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
@@ -86,59 +87,21 @@ public class MessageClient {
         // Start the connection's incoming listener
         Task connTask = conn.StartAsync();
 
-        handler = new(conn, linked) {
+        handler = new(conn, linked.Token) {
             UserId = new("SYSTEM")
         };
         ackHandler = new(handler, true, linked.Token);
-        protocol = factory.CreateProtocol(selfId, handler, DbHandler, ackHandler);
+        protocol = factory.CreateProtocol(username, handler, DbHandler, ackHandler);
+        introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
-        // Send intro
-
-        try {
-            await conn.WriteAsync(protocol.CreateIntroduction());
-        }
-        catch (OperationCanceledException) {
-            Console.WriteLine("Introduction cancelled");
-        }
-
-        //Cancel waiting for ack after 5 seconds
-        introCts.CancelAfter(5000);
-
-        bool response = false;
-
-        // wait for ack
-        try {
-            response = await handler.WaitForIncomingAsync(introCts.Token);
-        }
-        catch (OperationCanceledException) when (!linked.IsCancellationRequested) {
-            Console.WriteLine("Problem while waiting to receive ack");
-        }
-
-        if (!response) {
-            Console.WriteLine("Timeout waiting for ack");
-            linked.Cancel();
-            await connTask;
-            return;
-        }
-        
-        
-        bool introduced;
-
-        //Check if message is actually ack
-        try {
-            introduced = (await handler.ReadOneIncomingAsync(linked.Token)).Type == MessageType.Ack;
-        }
-        catch (OperationCanceledException) {
-            Console.WriteLine("ACK Read cancelled");
-            introduced = false;
-        }
-
-
-        if (introduced) {
-            Console.WriteLine("ACK Received");
-        }
-        else {
-            Console.WriteLine("Unsuccessful introduction");
+        // Try logging in or registering
+        if (registering)
+            if (!await TryRegisterAsync(password, introCts.Token)) {
+                linked.Cancel();
+                await connTask;
+                return;
+            }
+        else if (!await TryLoginAsync(password, introCts.Token)) {
             linked.Cancel();
             await connTask;
             return;
@@ -149,8 +112,8 @@ public class MessageClient {
         await SendUnsentMessagesAsync();
 
         await handlerTask;
+        linked.Cancel();
         await connTask;
-        cts.Cancel();
     }
 
     private async Task<bool> AuthTlsAsync(CancellationToken ct) {
@@ -215,7 +178,8 @@ public class MessageClient {
     }
 
     private async Task SendUnsentMessagesAsync() {
-        MessageWrapper[] wrappers = await DbHandler.GetMessagesWithStateAsync(username, MessageState.Unsent);
+        // Get messages of the current user that are unsent
+        MessageWrapper[] wrappers = await DbHandler.GetMessagesWithStateAsync(username.Value, MessageState.Unsent);
 
         List<Task<bool>> sendTasks = [ ];
         List<MessageWrapper> realPendingMessages = [ ];
@@ -226,6 +190,7 @@ public class MessageClient {
             try {
                 MessageData? messageData = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
                 if (messageData is not null && ackHandler is not null) {
+                    // Do not await sends one by one. ackHandler will take care of ordering and pacing.
                     sendTasks.Add(ackHandler.EnqueueMessageAsync(messageData));
                     Console.WriteLine("Pending message enqueued");
                     realPendingMessages.Add(wrapper);
@@ -235,6 +200,8 @@ public class MessageClient {
                 Console.WriteLine($"Error delivering pending message to: {e.Message}");
             }
         }
+
+        // await send to finish
 
         bool[] results = await Task.WhenAll(sendTasks);
         int success = 0, failure = 0;
@@ -252,15 +219,70 @@ public class MessageClient {
         if (realPendingMessages.Count > 0) {
             Console.WriteLine($"Delivered {success} pending messages, failed {failure}");
         }
-        
-
-
     }
 
-    public async Task<bool> TryRegisterAsync() {
+    private async Task<bool> TryRegisterAsync(string password, CancellationToken ct) {
+        if (protocol is null || handler is null || conn is null) return false;
+        MessageData message = protocol.CreateAccountMessage(password, MessageType.Register);
+
+
+
+        await conn.Buffer.Writer.WriteAsync(message, ct);
+
+        MessageData response;
+
+        try {
+            response = await handler.ReadOneIncomingAsync(ct);
+        } 
+        catch (Exception e) {
+            Console.WriteLine($"Failed to read registration response: {e.Message}");
+            return false;
+        }
+
+        switch (response.Type) {
+            case MessageType.Ack:
+                Console.WriteLine("Successful registration");
+                return true;
+            case MessageType.Nack:
+                Console.WriteLine($"Unsuccessful registration: {Encoding.UTF8.GetString(response.Payload)}");
+                return false;
+            default:
+                Console.WriteLine($"Unsuccessful registration, response type was: {response.Type}");
+                return false;
+        }
+
         
-
-
     }
 
+    private async Task<bool> TryLoginAsync(string password, CancellationToken ct) {
+        if (protocol is null || handler is null || conn is null) return false;
+        MessageData message = protocol.CreateAccountMessage(password, MessageType.Login);
+
+        await conn.Buffer.Writer.WriteAsync(message, ct);
+
+        MessageData response;
+
+        try {
+            response = await handler.ReadOneIncomingAsync(ct);
+        }
+        catch (Exception e) {
+            Console.WriteLine($"Login failed: {e.Message}");
+            return false;
+        }
+
+        switch (response.Type) {
+            case MessageType.Ack:
+                Console.WriteLine("Successful login");
+                return true;
+            case MessageType.Nack:
+                Console.WriteLine($"Unsuccessful login: {Encoding.UTF8.GetString(response.Payload)}");
+                return false;
+            default:
+                Console.WriteLine($"Unsuccessful login, response type was: {response.Type}");
+                return false;
+
+
+        }
+
+    }
 }

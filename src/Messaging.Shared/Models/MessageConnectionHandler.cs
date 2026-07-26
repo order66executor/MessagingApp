@@ -8,13 +8,13 @@ public class MessageConnectionHandler {
 
     //buffer to write outgoing messages to
     private readonly MessageDataBuffer outBuffer;
-    private readonly CancellationTokenSource ct;
+    private readonly CancellationTokenSource cts;
     public StringIdentifier UserId { get; set; }
 
 
-    public MessageConnectionHandler( MessageConnection conn, CancellationTokenSource cts) {
+    public MessageConnectionHandler(MessageConnection conn, CancellationToken ct) {
         this.conn = conn;
-        ct = cts;
+        cts = CancellationTokenSource.CreateLinkedTokenSource(ct);
         outBuffer = new();
     }
 
@@ -24,7 +24,7 @@ public class MessageConnectionHandler {
         Task outgoingTask = ProcessOutgoingAsync();
 
         await Task.WhenAny(incomingTask, outgoingTask);
-        ct.Cancel();
+        cts.Cancel();
         await Task.WhenAll(incomingTask, outgoingTask);
         outBuffer.Dispose();
     }
@@ -33,7 +33,7 @@ public class MessageConnectionHandler {
     private async Task ProcessIncomingAsync(IMessageProtocol protocol) {
         try {
             // wait forever for incoming
-            await foreach (MessageData data in conn.Buffer.Reader.ReadAllAsync(ct.Token)) {
+            await foreach (MessageData data in conn.Buffer.Reader.ReadAllAsync(cts.Token)) {
 
                 // pass to protocol for handling
                 if (await protocol.ProcessAsync(UserId, data)) {
@@ -52,7 +52,7 @@ public class MessageConnectionHandler {
     // Async wait for messages to be written to outBuffer and write them to the stream
     private async Task ProcessOutgoingAsync() {
         try {
-            await foreach (MessageData data in outBuffer.Reader.ReadAllAsync(ct.Token)) {
+            await foreach (MessageData data in outBuffer.Reader.ReadAllAsync(cts.Token)) {
                 await conn.WriteAsync(data);
             }
         }
@@ -63,7 +63,7 @@ public class MessageConnectionHandler {
     }
 
     public async Task WriteToOutBufferAsync(MessageData message) {
-        await outBuffer.Writer.WriteAsync(message, ct.Token);
+        await outBuffer.Writer.WriteAsync(message, cts.Token);
     }
 
     // Returns if there is an incoming message to be read
