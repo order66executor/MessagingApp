@@ -8,7 +8,7 @@ namespace Messaging.Server.Data;
 public class AccountDbHandler {
     private readonly string dbPath;
 
-    public AccountDbHandler(string dbPath = "messaging_server.db") {
+    public AccountDbHandler(string dbPath = "server_accounts.db") {
         this.dbPath = dbPath;
         using var db = CreateDbContext();
         db.Database.EnsureDeleted();
