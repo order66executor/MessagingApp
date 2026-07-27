@@ -228,7 +228,7 @@ public class MessageClient {
 
 
 
-        await conn.Buffer.Writer.WriteAsync(message, ct);
+        await conn.WriteAsync(message);
 
         MessageData response;
 
@@ -259,7 +259,7 @@ public class MessageClient {
         if (protocol is null || handler is null || conn is null) return false;
         MessageData message = protocol.CreateAccountMessage(password, MessageType.Login);
 
-        await conn.Buffer.Writer.WriteAsync(message, ct);
+        await conn.WriteAsync(message);
 
         MessageData response;
 
