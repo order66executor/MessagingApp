@@ -10,6 +10,9 @@ public class AccountDbHandler {
 
     public AccountDbHandler(string dbPath = "messaging_server.db") {
         this.dbPath = dbPath;
+        using var db = CreateDbContext();
+        db.Database.EnsureDeleted();
+        db.Database.EnsureCreated();
     }
     private AccountDbContext CreateDbContext() => new(dbPath);
 
