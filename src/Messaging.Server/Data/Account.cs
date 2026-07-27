@@ -2,8 +2,8 @@ namespace Messaging.Server.Data;
 
 public class Account {
 
-    public int Id;
-    public required string Username;
-    public required string PasswordHash;
+    public int Id { get; set; }
+    public required string Username { get; set; }
+    public required string PasswordHash { get; set; }
 
 }

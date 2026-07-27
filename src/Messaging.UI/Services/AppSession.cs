@@ -14,7 +14,7 @@ public class AppSession
 
     public string? CurrentUsername { get; private set; }
 
-    public async Task<bool> ConnectAsync(string ipAddress, int port, string username, bool useTls)
+    public async Task<bool> ConnectAsync(string ipAddress, int port, string username, string password, bool isRegisterMode, bool useTls)
     {
         if (!IPAddress.TryParse(ipAddress, out var address))
         {
@@ -22,7 +22,7 @@ public class AppSession
         }
 
         CurrentUsername = username;
-        Client = new MessageClient(address, port, new ClientProtocolFactory(), username, useTls);
+        Client = new MessageClient(address, port, new ClientProtocolFactory(), username, password, useTls);
         Client.DbHandler.OnMessageAdded += (wrapper) => 
         {
             WeakReferenceMessenger.Default.Send(new Messages.NewMessageReceivedMessage(wrapper));
@@ -36,7 +36,7 @@ public class AppSession
         {
             try
             {
-                await Client.RunAsync(_cts);
+                await Client.RunAsync(_cts.Token, registering: isRegisterMode);
             }
             catch
             {

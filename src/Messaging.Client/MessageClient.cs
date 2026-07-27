@@ -95,12 +95,13 @@ public class MessageClient {
         introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         // Try logging in or registering
-        if (registering)
+        if (registering) {
             if (!await TryRegisterAsync(password, introCts.Token)) {
                 linked.Cancel();
                 await connTask;
                 return;
             }
+        }
         else if (!await TryLoginAsync(password, introCts.Token)) {
             linked.Cancel();
             await connTask;

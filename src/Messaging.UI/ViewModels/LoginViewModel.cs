@@ -106,8 +106,8 @@ public partial class LoginViewModel : ViewModelBase
         IsConnecting = true;
         ErrorMessage = "";
 
-        // TODO: Pass Password and IsRegisterMode to ConnectAsync when backend auth is implemented
-        bool success = _appSession != null && await _appSession.ConnectAsync(IpAddress, portNum, Username, UseTls);
+        // Passed Password and IsRegisterMode to ConnectAsync
+        bool success = _appSession != null && await _appSession.ConnectAsync(IpAddress, portNum, Username, Password, IsRegisterMode, UseTls);
 
         IsConnecting = false;
         
