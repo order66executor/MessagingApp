@@ -36,4 +36,7 @@ public abstract class ProtocolBase : IMessageProtocol {
             Payload = Encoding.UTF8.GetBytes(reason)
         };
     }
+
+    public abstract Task SendFileAsync(StringIdentifier target, string filePath);
+
 }

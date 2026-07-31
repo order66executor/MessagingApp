@@ -33,11 +33,6 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
 
             case MessageType.FileUpload:
                 if (handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? uploadHandler)) {
-                    try {
-                        await EnqueueAck(uploadHandler, new("SYSTEM"), message.TargetId, message.Id);
-                    } catch (Exception e) {
-                        Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
-                    }
                     var uploadPayload = MessagePackSerializer.Deserialize<FileUploadPayload>(message.Payload);
                     if (uploadPayload != null) {
                         string fileId = Guid.NewGuid().ToString();
@@ -52,6 +47,11 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                         var notifPayload = new FileNotificationPayload { FileId = fileId, FileName = sanitizedFileName, FileSize = uploadPayload.FileData.Length };
                         MessageData notifMsg = new() { Id = message.Id, Type = MessageType.FileNotification, SourceId = message.SourceId, TargetId = message.TargetId, SentAtUtc = DateTime.UtcNow, Payload = MessagePackSerializer.Serialize(notifPayload) };
                         _ = router.RouteMessageAsync(notifMsg);
+                    }
+                    try {
+                        await EnqueueAck(uploadHandler, new("SYSTEM"), message.TargetId, message.Id);
+                    } catch (Exception e) {
+                        Console.WriteLine($"Exception thrown while replying Ack to sender: {e.Message}");
                     }
                 }
                 return true;
@@ -70,7 +70,7 @@ public class ServerProtocol : ProtocolBase, IServerMessageProtocol {
                         var filePath = Directory.GetFiles(saveDir, $"{reqPayload.FileId}_*").FirstOrDefault();
                         if (filePath != null) {
                             byte[] fileData = await File.ReadAllBytesAsync(filePath);
-                            string fileName = Path.GetFileName(filePath).Substring(reqPayload.FileId.Length + 1);
+                            string fileName = Path.GetFileName(filePath)[(reqPayload.FileId.Length + 1)..];
                             
                             var resPayload = new FileResponsePayload { FileId = reqPayload.FileId, FileName = fileName, FileData = fileData };
                             MessageData resMsg = new() { Id = message.Id, Type = MessageType.FileResponse, SourceId = new("SYSTEM"), TargetId = message.SourceId, SentAtUtc = DateTime.UtcNow, Payload = MessagePackSerializer.Serialize(resPayload) };
