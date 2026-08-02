@@ -4,5 +4,5 @@ using Messaging.Shared.Models;
 using Messaging.Shared.Protocol;
 
 public interface IServerMessageProtocol : IMessageProtocol {
-    StringIdentifier ReceiveIntroduction(MessageData message);
+
 }

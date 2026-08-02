@@ -16,7 +16,7 @@ public class PendingAckTracker {
     }
 
     //waits for waitLength for someone to call complete on the key
-    public async Task<bool> RegisterWaitAsync((long Id, StringIdentifier Target) key) {
+    public async Task<bool> RegisterWaitAsync((long Id, StringIdentifier UserId) key) {
         // create tcs to complete
         TaskCompletionSource<bool> tcs = new(TaskCreationOptions.RunContinuationsAsynchronously);
         pendingMessages.TryAdd(key, tcs);
@@ -32,9 +32,9 @@ public class PendingAckTracker {
     }
 
     //complete waiting for key
-    public void Complete((long Id, StringIdentifier Target) key) {
+    public void Complete((long Id, StringIdentifier UserId) key) {
         if(!pendingMessages.TryGetValue(key, out var result))
-            Console.WriteLine($"Ack wait cannot be completed, no such dict entry {key.Target}");
+            Console.WriteLine($"Ack wait cannot be completed, no such dict entry {key.UserId}");
         
         if (result is null) return;
         result.TrySetResult(true);

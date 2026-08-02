@@ -17,11 +17,12 @@ public class AckWaitHandler {
     private MessageConnectionHandler Handler => handlers.Values.First();
     public ConcurrentDictionary<MessageData, TaskCompletionSource<bool>> InProgress { get; }
     private readonly Lock syncRoot = new();
-    private readonly bool useSourceId = false;
+    private readonly bool useSourceId;
 
     public AckWaitHandler(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers,
         bool retry, ConcurrentDictionary<StringIdentifier, CancellationToken> tokens, CancellationToken ct) {
 
+        // used for the server
         this.ct = ct;
         this.handlers = handlers;
         this.retry = retry;
@@ -30,10 +31,13 @@ public class AckWaitHandler {
         InProgress = [ ];
         this.tokens = tokens;
         tracker = new(ct);
+
+        //to-be-acked messages are identified by id and source
         useSourceId = true;
     }
 
     public AckWaitHandler(MessageConnectionHandler handler, bool retry, CancellationToken ct) {
+        //used on the client
         handlers = [ ];
         tokens = [ ];
         InProgress = [ ];
@@ -45,6 +49,9 @@ public class AckWaitHandler {
         tokens.TryAdd(new StringIdentifier(""), ct);
         hasOnlyOneHandler = true;
         tracker = new(ct);
+
+        //to-be-acked messages are identified by id and target
+        useSourceId = false;
     }
 
 

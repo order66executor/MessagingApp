@@ -1,17 +1,16 @@
 using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
+using System.Net.Security;
+using System.Security.Cryptography.X509Certificates;
+using System.Security.Authentication;
+using System.Text;
 
 using Messaging.Shared.Models;
 using Messaging.Server.Protocols;
 using Messaging.Server.Services;
-using System.Net.Security;
-using Microsoft.EntityFrameworkCore.Diagnostics;
-using System.Security.Cryptography.X509Certificates;
-using System.Security.Authentication;
 using Messaging.Server.Data;
-using System.Text;
-using System.ComponentModel;
+using Messaging.Server.Protocols.Handlers;
 
 
 namespace Messaging.Server;
@@ -40,9 +39,9 @@ public class MessageServer {
         handlers = new();
         tokens = new();
         
-        router = new MessageRouter(handlers, new(handlers, false, tokens, ct));
-        
-        protocol = factory.CreateProtocol(0, handlers, router);
+        router = new MessageRouter(handlers, new(handlers, retry: false, tokens: tokens, ct: ct));
+        ServerFileStorageService service = new(Path.Combine(Environment.CurrentDirectory, "FileStorage"));
+        protocol = factory.CreateProtocol([ new AckHandler(router), new TextMessageHandler(handlers, router), new FileUploadHandler(handlers, router, service), new FileRequestHandler(handlers, router, service) ]);
         tasks = [ ];
         this.ct = ct;
         accDbHandler = new();
@@ -159,7 +158,7 @@ public class MessageServer {
 
         MessageData firstMessage = await handler.ReadOneIncomingAsync(introCts.Token);
 
-        StringIdentifier id = protocol.ReceiveIntroduction(firstMessage);
+        StringIdentifier id = firstMessage.SourceId;
         string password = Encoding.UTF8.GetString(firstMessage.Payload);
 
         bool loginSuccess;

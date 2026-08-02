@@ -15,7 +15,7 @@ public class MessageData {
     [Key(3)]
     public required StringIdentifier TargetId { get; set; }
     [Key(4)]
-    public required DateTime SentAtUtc { get; set; }
+    public required DateTime SentAtUtc { get; set; } = DateTime.UtcNow;
     [Key(5)]
     public required byte[] Payload { get; set; }
 }
