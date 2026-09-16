@@ -31,6 +31,7 @@ public class MessageClient {
     private readonly string password;
     public ClientDbHandler DbHandler { get; }
     private AckWaitHandler? ackHandler;
+    private ClientMessageSender? sender;
 
     public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username, string password, bool useTls) {
         this.address = address;
@@ -92,17 +93,19 @@ public class MessageClient {
         };
         ackHandler = new(handler, true, linked.Token);
         protocol = factory.CreateProtocol(username, handler, DbHandler, ackHandler);
+        sender = new(username, DbHandler, ackHandler);
+
         introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
         // Try logging in or registering
         if (registering) {
-            if (!await TryRegisterAsync(password, introCts.Token)) {
+            if (!await TryRegisterAsync(introCts.Token)) {
                 linked.Cancel();
                 await connTask;
                 return;
             }
         }
-        else if (!await TryLoginAsync(password, introCts.Token)) {
+        else if (!await TryLoginAsync(introCts.Token)) {
             linked.Cancel();
             await connTask;
             return;
@@ -164,18 +167,18 @@ public class MessageClient {
 
     // Queue a text message to the outgoing buffer
     public async Task SendTextMessageAsync(string target, string text) {
-        if (protocol is null) return;
-        await protocol.SendTextMessageAsync(new StringIdentifier(target), text);
+        if (sender is null) return;
+        await sender.SendTextMessageAsync(new StringIdentifier(target), text);
     }
 
     public async Task SendFileAsync(string target, string filePath) {
-        if (protocol is null) return;
-        await protocol.SendFileAsync(new StringIdentifier(target), filePath);
+        if (sender is null) return;
+        await sender.SendFileAsync(new StringIdentifier(target), filePath);
     }
 
     public async Task RequestFileAsync(string fileId) {
-        if (protocol is null) return;
-        await protocol.RequestFileAsync(fileId);
+        if (sender is null) return;
+        await sender.RequestFileAsync(fileId);
     }
 
     private async Task SendUnsentMessagesAsync() {
@@ -222,9 +225,9 @@ public class MessageClient {
         }
     }
 
-    private async Task<bool> TryRegisterAsync(string password, CancellationToken ct) {
-        if (protocol is null || handler is null || conn is null) return false;
-        MessageData message = protocol.CreateAccountMessage(password, MessageType.Register);
+    private async Task<bool> TryRegisterAsync(CancellationToken ct) {
+        if (sender is null || handler is null || conn is null) return false;
+        MessageData message = sender.CreateAccountMessage(password, MessageType.Register);
 
 
 
@@ -255,9 +258,9 @@ public class MessageClient {
         
     }
 
-    private async Task<bool> TryLoginAsync(string password, CancellationToken ct) {
-        if (protocol is null || handler is null || conn is null) return false;
-        MessageData message = protocol.CreateAccountMessage(password, MessageType.Login);
+    private async Task<bool> TryLoginAsync(CancellationToken ct) {
+        if (sender is null || handler is null || conn is null) return false;
+        MessageData message = sender.CreateAccountMessage(password, MessageType.Login);
 
         await conn.WriteAsync(message);
 
