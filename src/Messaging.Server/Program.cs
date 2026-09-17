@@ -49,7 +49,7 @@ public class Program {
 
             bool tls = !args.Contains("--notls");
 
-            server = new MessageServer(port, new ServerProtocolFactory(), tls, cts.Token);
+            server = new MessageServer(port, tls, cts.Token);
         }
         else {
             Console.WriteLine("Invalid port number");

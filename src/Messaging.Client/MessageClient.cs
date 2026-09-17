@@ -11,6 +11,9 @@ using System.Security.Authentication;
 using System.Security.Cryptography.X509Certificates;
 using System.Reflection;
 using System.Text;
+using Messaging.Shared.Protocol;
+using Messaging.Shared.Protocol.Handlers;
+using Messaging.Client.Protocols.Handlers;
 
 namespace Messaging.Client;
 
@@ -18,9 +21,7 @@ public class MessageClient {
 
     private readonly IPAddress address;
     private readonly int port;
-    private IClientMessageProtocol? protocol;
-
-    private readonly IClientMessageProtocolFactory factory;
+    private IMessageDispatcher? dispatcher;
 
     private readonly TcpClient client;
     private readonly bool useTls;
@@ -30,13 +31,12 @@ public class MessageClient {
     private readonly StringIdentifier username;
     private readonly string password;
     public ClientDbHandler DbHandler { get; }
-    private AckWaitHandler? ackHandler;
+    private AckWaitHandler? waitHandler;
     private ClientMessageSender? sender;
 
-    public MessageClient(IPAddress address, int port, IClientMessageProtocolFactory factory, string username, string password, bool useTls) {
+    public MessageClient(IPAddress address, int port, string username, string password, bool useTls) {
         this.address = address;
         this.port = port;
-        this.factory = factory;
         client = new(AddressFamily.InterNetwork);
         this.username = new(username);
         this.password = password;
@@ -91,9 +91,9 @@ public class MessageClient {
         handler = new(conn, linked.Token) {
             UserId = new("SYSTEM")
         };
-        ackHandler = new(handler, true, linked.Token);
-        protocol = factory.CreateProtocol(username, handler, DbHandler, ackHandler);
-        sender = new(username, DbHandler, ackHandler);
+        waitHandler = new(handler, true, linked.Token);
+        dispatcher = new MessageDispatcher([ new AckHandler(waitHandler), new FileNotificationHandler(DbHandler, handler), new FileResponseHandler(handler), new TextMessageHandler(DbHandler, handler) ]);
+        sender = new(username, DbHandler, waitHandler);
 
         introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
@@ -112,7 +112,7 @@ public class MessageClient {
         }
 
         // Start listening for incoming and outgoing messages
-        Task handlerTask = handler.StartProcessingAsync(protocol);
+        Task handlerTask = handler.StartProcessingAsync(dispatcher);
         await SendUnsentMessagesAsync();
 
         await handlerTask;
@@ -193,9 +193,9 @@ public class MessageClient {
 
             try {
                 MessageData? messageData = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
-                if (messageData is not null && ackHandler is not null) {
+                if (messageData is not null && waitHandler is not null) {
                     // Do not await sends one by one. ackHandler will take care of ordering and pacing.
-                    sendTasks.Add(ackHandler.EnqueueMessageAsync(messageData));
+                    sendTasks.Add(waitHandler.EnqueueMessageAsync(messageData));
                     Console.WriteLine("Pending message enqueued");
                     realPendingMessages.Add(wrapper);
                 }

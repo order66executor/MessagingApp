@@ -19,8 +19,8 @@ public class MessageConnectionHandler {
     }
 
     // Starts processing messages and handles exiting
-    public async Task StartProcessingAsync(IMessageProtocol protocol) {
-        Task incomingTask = ProcessIncomingAsync(protocol);
+    public async Task StartProcessingAsync(IMessageDispatcher dispatcher) {
+        Task incomingTask = ProcessIncomingAsync(dispatcher);
         Task outgoingTask = ProcessOutgoingAsync();
 
         await Task.WhenAny(incomingTask, outgoingTask);
@@ -30,13 +30,13 @@ public class MessageConnectionHandler {
     }
 
     // Asynchronously read forever from conn.Buffer for incoming messages and pass them to protocol
-    private async Task ProcessIncomingAsync(IMessageProtocol protocol) {
+    private async Task ProcessIncomingAsync(IMessageDispatcher dispatcher) {
         try {
             // wait forever for incoming
             await foreach (MessageData data in conn.Buffer.Reader.ReadAllAsync(cts.Token)) {
 
                 // pass to protocol for handling
-                if (await protocol.ProcessAsync(UserId, data)) {
+                if (await dispatcher.ProcessAsync(UserId, data)) {
 
                 }
                 else {

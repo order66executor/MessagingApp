@@ -7,7 +7,6 @@ using System.Text;
 using Messaging.Shared.Services;
 
 public class ClientMessageSender {
-
     private readonly StringIdentifier identifier;
     private readonly ClientDbHandler dbHandler;
     private readonly AckWaitHandler ackHandler;

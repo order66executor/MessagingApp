@@ -22,7 +22,7 @@ public class AppSession
         }
 
         CurrentUsername = username;
-        Client = new MessageClient(address, port, new ClientProtocolFactory(), username, password, useTls);
+        Client = new MessageClient(address, port, username, password, useTls);
         Client.DbHandler.OnMessageAdded += (wrapper) => 
         {
             WeakReferenceMessenger.Default.Send(new Messages.NewMessageReceivedMessage(wrapper));

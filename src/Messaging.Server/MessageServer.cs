@@ -7,10 +7,13 @@ using System.Security.Authentication;
 using System.Text;
 
 using Messaging.Shared.Models;
-using Messaging.Server.Protocols;
 using Messaging.Server.Services;
 using Messaging.Server.Data;
 using Messaging.Server.Protocols.Handlers;
+using Messaging.Shared.Services;
+using Messaging.Shared.Protocol.Handlers;
+using Messaging.Shared.Protocol;
+using Messaging.Server.Protocols;
 
 
 namespace Messaging.Server;
@@ -19,7 +22,7 @@ public class MessageServer {
 
     public int Port { get; set; }
 
-    private readonly IServerMessageProtocol protocol;
+    private readonly IMessageDispatcher dispatcher;
 
     private readonly TcpListener listener;
     private readonly bool useTls;
@@ -32,16 +35,17 @@ public class MessageServer {
     private readonly CancellationToken ct;
     private readonly AccountDbHandler accDbHandler;
 
-    public MessageServer(int port, IServerMessageProtocolFactory factory, bool useTls, CancellationToken ct) {
+    public MessageServer(int port, bool useTls, CancellationToken ct) {
         Port = port;
         listener = new(IPAddress.Any, Port);
         this.useTls = useTls;
         handlers = new();
         tokens = new();
+        AckWaitHandler waitHandler = new(handlers, retry: false, tokens: tokens, ct: ct);
         
-        router = new MessageRouter(handlers, new(handlers, retry: false, tokens: tokens, ct: ct));
+        router = new MessageRouter(handlers, waitHandler);
         ServerFileStorageService service = new(Path.Combine(Environment.CurrentDirectory, "FileStorage"));
-        protocol = factory.CreateProtocol([ new AckHandler(router), new TextMessageHandler(handlers, router), new FileUploadHandler(handlers, router, service), new FileRequestHandler(handlers, router, service) ]);
+        dispatcher = new ServerDispatcher([ new AckHandler(waitHandler), new TextMessageHandler(handlers, router), new FileUploadHandler(handlers, router, service), new FileRequestHandler(handlers, router, service) ]);
         tasks = [ ];
         this.ct = ct;
         accDbHandler = new();
@@ -188,7 +192,7 @@ public class MessageServer {
 
         if (!loginSuccess) {
             Console.WriteLine($"Unsuccessful login/register, reason: {rejectReason}");
-            await conn.WriteAsync(protocol.CreateNack(new("SYSTEM"), id, 0, rejectReason));
+            await conn.WriteAsync(AckFactory.CreateNack(new("SYSTEM"), id, 0, rejectReason));
             linked.Cancel();
             await connTask;
             return;
@@ -206,9 +210,9 @@ public class MessageServer {
 
         try {
             Console.WriteLine("Replying ack");
-            await handler.WriteToOutBufferAsync(protocol.CreateAck(new StringIdentifier("SYSTEM"), id, 0));
+            await handler.WriteToOutBufferAsync(AckFactory.CreateAck(new StringIdentifier("SYSTEM"), id, 0));
             // start listening for incoming and outgoing
-            handlerTask = handler.StartProcessingAsync(protocol);
+            handlerTask = handler.StartProcessingAsync(dispatcher);
             // deliver pending messages
             await router.DeliverPendingMessagesAsync(id, handler);
             // process messages until shutdown

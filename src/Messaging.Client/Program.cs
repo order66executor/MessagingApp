@@ -39,7 +39,7 @@ public class Program {
                 throw new InvalidOperationException("Password is required.");
 
 
-            client = new(address, port, new ClientProtocolFactory(), username, password, tls);
+            client = new(address, port, username, password, tls);
         }
         else {
             Console.WriteLine("Invalid port number or address");
