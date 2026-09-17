@@ -7,12 +7,13 @@ namespace Messaging.Server.Data;
 
 public class ServerDbContext : DbContextBase {
     public DbSet<MessageWrapper> Messages { get; set; }
-    public DbSet<DbAckCounter> HighestAcks { get; set; }
+    public DbSet<DbAckCounter> HighestAcks { get; set; } // This table tracks the highest acked message ids per conversation per user
 
     public ServerDbContext(string dbPath) : base(dbPath) {
 
     }
 
+    // Constraints and indices
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.Entity<MessageWrapper>(entity => {
             entity.HasKey(e => e.Id);

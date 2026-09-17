@@ -10,6 +10,7 @@ public class AccountDbContext : DbContextBase {
 
     public AccountDbContext(string dbPath) : base(dbPath) { }
 
+    // Prepare constraints and indices
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.Entity<Account>(entity => {
             entity.HasKey(e => e.Id);

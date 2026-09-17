@@ -25,10 +25,14 @@ public class TextMessageHandler : IMessageHandler {
         if (!handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler))
             return false;
 
+        // Acknowledge
         var ack = AckFactory.CreateAck(new("SYSTEM"), message.TargetId, message.Id);
         await handler.WriteToOutBufferAsync(ack);
 
+        // Attempt to update the highest ack counter, if false the message is a duplicate
         if (await router.UpdateHighestAckAsync(message))
+
+            // route message to recipient
             _ = router.RouteMessageAsync(message);
         else Console.WriteLine("Message already acked, discarding");
 

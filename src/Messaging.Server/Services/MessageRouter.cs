@@ -11,7 +11,7 @@ namespace Messaging.Server.Services;
 public class MessageRouter  {
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
     private readonly string dbPath;
-    private static readonly TimeSpan sweepInterval = TimeSpan.FromSeconds(10);
+    private static readonly TimeSpan sweepInterval = TimeSpan.FromSeconds(10); // Interval between unsent message sweeps
     public AckWaitHandler AckHandler { get; }
 
     public MessageRouter(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, AckWaitHandler ackHandler, string dbPath = "messaging_server.db") {
@@ -29,6 +29,7 @@ public class MessageRouter  {
 
     private ServerDbContext CreateDbContext() => new(dbPath);
 
+    // Update the ack counter for the conversation for the person that sent the message
     public async Task<bool> UpdateHighestAckAsync(MessageData message) {
         var conversationKey = DbUtil.GetConversationKey(message.SourceId, message.TargetId);
         using var db = CreateDbContext();

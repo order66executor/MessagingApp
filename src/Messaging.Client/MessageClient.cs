@@ -2,7 +2,6 @@ using System.Net;
 using System.Net.Sockets;
 
 using Messaging.Shared.Models;
-using Messaging.Client.Protocols;
 using Messaging.Client.Services;
 using Messaging.Shared.Services;
 using MessagePack;
@@ -19,25 +18,46 @@ namespace Messaging.Client;
 
 public class MessageClient {
 
+    // IP Address of the server
     private readonly IPAddress address;
+
+    //Port of the server
     private readonly int port;
+
+    // Dispatcher that handles incoming messages
     private IMessageDispatcher? dispatcher;
 
+    // TCPClient object for the connection to the server
     private readonly TcpClient client;
+
+    // Whether to use TLS authentication when connecting to server. Turn off for testing
     private readonly bool useTls;
 
+    // Connection object wrapping the TcpClient object
     private MessageConnection? conn;
+
+    // Connection handler object wrapping the connection
     private MessageConnectionHandler? handler;
+
+    // Username of this client
     private readonly StringIdentifier username;
+
+    // Password used for logging in to the server IN PLAIN TEXT (we should probably do something about that)
     private readonly string password;
+
+    // DB Handler object for abstracting over the DbContext
     public ClientDbHandler DbHandler { get; }
+
+    // ACK waiting handler object that all outgoing messages (SHOULD) go through
     private AckWaitHandler? waitHandler;
+
+    // Message sender object that routes through waitHandler
     private ClientMessageSender? sender;
 
     public MessageClient(IPAddress address, int port, string username, string password, bool useTls) {
         this.address = address;
         this.port = port;
-        client = new(AddressFamily.InterNetwork);
+        client = new(AddressFamily.InterNetwork); // Use IPv4
         this.username = new(username);
         this.password = password;
         DbHandler = new();
@@ -182,6 +202,7 @@ public class MessageClient {
     }
 
     private async Task SendUnsentMessagesAsync() {
+
         // Get messages of the current user that are unsent
         MessageWrapper[] wrappers = await DbHandler.GetMessagesWithStateAsync(username.Value, MessageState.Unsent);
 
@@ -193,9 +214,13 @@ public class MessageClient {
 
             try {
                 MessageData? messageData = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+
+                // Check for null messages
                 if (messageData is not null && waitHandler is not null) {
+
                     // Do not await sends one by one. ackHandler will take care of ordering and pacing.
                     sendTasks.Add(waitHandler.EnqueueMessageAsync(messageData));
+
                     Console.WriteLine("Pending message enqueued");
                     realPendingMessages.Add(wrapper);
                 }
@@ -217,6 +242,8 @@ public class MessageClient {
             else {
                 ++failure;
             }
+
+            // Update messages state according to success state
             await DbHandler.UpdateMessageStateAsync(realPendingMessages[i].Id, results[i] ? MessageState.Sent : MessageState.Unsent);
         }
 
@@ -225,16 +252,18 @@ public class MessageClient {
         }
     }
 
+    // Attempt registering an account on the server
     private async Task<bool> TryRegisterAsync(CancellationToken ct) {
         if (sender is null || handler is null || conn is null) return false;
+
         MessageData message = sender.CreateAccountMessage(password, MessageType.Register);
 
-
-
+        // Send registration request
         await conn.WriteAsync(message);
 
         MessageData response;
 
+        // Wait for response
         try {
             response = await handler.ReadOneIncomingAsync(ct);
         } 
@@ -262,10 +291,12 @@ public class MessageClient {
         if (sender is null || handler is null || conn is null) return false;
         MessageData message = sender.CreateAccountMessage(password, MessageType.Login);
 
+        // Send login request
         await conn.WriteAsync(message);
 
         MessageData response;
 
+        // Await response
         try {
             response = await handler.ReadOneIncomingAsync(ct);
         }
@@ -284,8 +315,6 @@ public class MessageClient {
             default:
                 Console.WriteLine($"Unsuccessful login, response type was: {response.Type}");
                 return false;
-
-
         }
 
     }

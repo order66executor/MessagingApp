@@ -3,6 +3,8 @@ using Messaging.Shared.Models;
 using Messaging.Shared.Protocol;
 
 namespace Messaging.Client.Protocols.Handlers;
+
+// Handle file notification messages
 public class FileNotificationHandler : IMessageHandler {
     public MessageType SupportedType { get; } = MessageType.FileNotification;
     private readonly MessageConnectionHandler connHandler;

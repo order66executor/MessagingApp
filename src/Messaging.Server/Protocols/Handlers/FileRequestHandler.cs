@@ -25,7 +25,7 @@ public class FileRequestHandler : IMessageHandler {
         this.storageService = storageService;
     }
 
-
+    // Routes the requested file to the source 
     public async Task<bool> HandleAsync(MessageData message) {
         if (!handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler))
             return false;
@@ -34,17 +34,22 @@ public class FileRequestHandler : IMessageHandler {
         var ack = AckFactory.CreateAck(new("SYSTEM"), new("SYSTEM"), message.Id);
         await handler.WriteToOutBufferAsync(ack);
 
+        // Deserialize the request payload
         var requestPayload = MessagePackSerializer.Deserialize<FileRequestPayload>(message.Payload);
         if (requestPayload is null) return false;
 
+        // Get the requested file from disk, currently loads the whole file into memory. TODO: file streaming and packetization
         var requestedFile = await storageService.GetFileAsync(requestPayload.FileId);
         if (!requestedFile.HasValue) return false;
 
+        // Construct file response payload
         var responsePayload = new FileResponsePayload() {
             FileId = requestPayload.FileId,
             FileName = requestedFile.Value.FileName,
             FileData = requestedFile.Value.Data
         };
+
+        // Construct MessageData object with the payload
         MessageData response = new() {
             Id = message.Id,
             Type = MessageType.FileResponse,
@@ -54,6 +59,7 @@ public class FileRequestHandler : IMessageHandler {
             Payload = MessagePackSerializer.Serialize(responsePayload)
         };
 
+        // Route the message and do not wait
         _ = router.RouteMessageAsync(response);
         return true;
         

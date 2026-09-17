@@ -7,10 +7,12 @@ namespace Messaging.Client.Data;
 
 public class ClientDbContext : DbContextBase {
 
+    // Table for messages
     public DbSet<MessageWrapper> Messages { get; set; }
 
     public ClientDbContext(string dbPath) : base(dbPath) {}
 
+    // Create constraints and indexes on messages table
     protected override void OnModelCreating(ModelBuilder modelBuilder) {
         modelBuilder.Entity<MessageWrapper>(entity => {
             entity.HasKey(e => e.Id);

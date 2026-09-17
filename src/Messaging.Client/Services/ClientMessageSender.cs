@@ -46,6 +46,7 @@ public class ClientMessageSender {
         
     }
 
+    // Sends the message and waits for an ack before returning, optionally saves the message to the db (turn off when sending system messages)
     private async Task SendAndWaitForAckAsync(MessageData message, bool saveToDb) {
         MessageData messageToSave = message;
 
@@ -70,10 +71,12 @@ public class ClientMessageSender {
         MessageWrapper? wrapper = null;
         if (saveToDb) 
             wrapper = await dbHandler.PlaceMessageAsync(messageToSave, MessageState.Pending);
-        bool result = await ackHandler.EnqueueMessageAsync(message); // Send the ORIGINAL message with full data
+        bool result = await ackHandler.EnqueueMessageAsync(message); // Send the ORIGINAL message with full data and wait for ack
 
-        if (result) Console.WriteLine($"Ack arrived for {message.Id} to {message.TargetId}");
+        if (result) Console.WriteLine($"Ack arrived for {message.Id} to {message.TargetId}"); 
 
+
+        // Save wrapped message to db
         if (saveToDb && wrapper is not null) 
             await dbHandler.UpdateMessageStateAsync(wrapper.Id, result ? MessageState.Sent : MessageState.Unsent);
 
