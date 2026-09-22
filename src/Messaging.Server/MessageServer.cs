@@ -43,7 +43,7 @@ public class MessageServer {
         tokens = new();
         AckWaitHandler waitHandler = new(handlers, retry: false, tokens: tokens, ct: ct);
         router = new MessageRouter(handlers, waitHandler);
-        ServerFileStorageService service = new(Path.Combine(Environment.CurrentDirectory, "FileStorage"));
+        FileStorageService service = new(Path.Combine(Environment.CurrentDirectory, "FileStorage"));
         dispatcher = new ServerDispatcher([ new AckHandler(waitHandler), new TextMessageHandler(handlers, router), new FileUploadHandler(handlers, router, service), new FileRequestHandler(handlers, router, service) ]);
         tasks = [ ];
         this.ct = ct;

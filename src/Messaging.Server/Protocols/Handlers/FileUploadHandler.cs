@@ -5,7 +5,7 @@ using MessagePack;
 using Messaging.Server.Services;
 using Messaging.Shared.Models;
 using Messaging.Shared.Protocol;
-
+using Messaging.Shared.Services;
 namespace Messaging.Server.Protocols.Handlers;
 
 public class FileUploadHandler : IMessageHandler {
