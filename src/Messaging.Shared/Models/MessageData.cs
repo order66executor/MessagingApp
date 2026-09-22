@@ -2,6 +2,8 @@ using MessagePack;
 
 namespace Messaging.Shared.Models;
 
+
+// Structure that is sent across the network and contains the payload and metadata
 [MessagePackObject]
 public class MessageData {
 

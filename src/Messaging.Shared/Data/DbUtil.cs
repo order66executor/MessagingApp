@@ -4,6 +4,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Messaging.Shared.Data;
 
+// Utility class for database-related operations
 public class DbUtil {
     public static string GetConversationKey(StringIdentifier userA, StringIdentifier userB) {
         return string.Compare(userA.Value, userB.Value, StringComparison.Ordinal) < 0

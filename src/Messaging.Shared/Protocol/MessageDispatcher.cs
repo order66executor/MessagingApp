@@ -1,6 +1,7 @@
 using Messaging.Shared.Models;
 namespace Messaging.Shared.Protocol;
 
+// Dispatches messages to the supplied handlers based on message type. Can be overridden is more specific behavior is required.
 public class MessageDispatcher : IMessageDispatcher {
     protected readonly Dictionary<MessageType, IMessageHandler> handlers;
 

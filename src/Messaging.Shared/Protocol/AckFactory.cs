@@ -4,6 +4,7 @@ using Messaging.Shared.Models;
 
 namespace Messaging.Shared.Protocol;
 
+// Utility class for constructing ACK and NACK messages
 public static class AckFactory {
     public static MessageData CreateAck(StringIdentifier source, StringIdentifier target, long idToAck) {
         MessageData message = new() {

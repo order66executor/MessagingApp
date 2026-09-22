@@ -1,8 +1,5 @@
-using System.Collections.Concurrent;
 using System.Runtime.InteropServices;
 
-using Messaging.Server.Protocols;
-using Messaging.Shared.Models;
 namespace Messaging.Server;
 
 public class Program {
@@ -11,7 +8,7 @@ public class Program {
 
     private static readonly CancellationTokenSource cts = new();
 
-
+    // args[0] = port number
     private static async Task Main(string[] args) {
 
         if (args.Length < 1) {
@@ -19,6 +16,7 @@ public class Program {
             return;
         }
 
+        // Handle cancel key
         Console.CancelKeyPress += (sender, e) => {
             e.Cancel = true;
             cts.Cancel();
@@ -26,6 +24,7 @@ public class Program {
 
         AppDomain.CurrentDomain.ProcessExit += (sender, e) => cts.Cancel();
 
+        // Handle POSIX signals
         using var termSignalRegistration = PosixSignalRegistration.Create(
             PosixSignal.SIGTERM,
             context =>
@@ -71,7 +70,10 @@ public class Program {
 
         } */
 
+        // Wait for server to exit
         await serverTask;
+
+        // Make sure all databases are closed
         Microsoft.Data.Sqlite.SqliteConnection.ClearAllPools(); 
 
 

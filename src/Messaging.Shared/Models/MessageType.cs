@@ -1,5 +1,6 @@
 namespace Messaging.Shared.Models;
 
+// Types that a MessageData can be
 public enum MessageType {
     Login,
     Register,

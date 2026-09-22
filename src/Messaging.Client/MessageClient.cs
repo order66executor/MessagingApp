@@ -287,6 +287,7 @@ public class MessageClient {
         
     }
 
+    // Attempt logging in to the server
     private async Task<bool> TryLoginAsync(CancellationToken ct) {
         if (sender is null || handler is null || conn is null) return false;
         MessageData message = sender.CreateAccountMessage(password, MessageType.Login);

@@ -17,6 +17,8 @@ public class MessageRouter  {
     public MessageRouter(ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers, AckWaitHandler ackHandler, string dbPath = "messaging_server.db") {
         this.handlers = handlers;
         this.dbPath = dbPath;
+
+        // Delete db for testing
         using (var db = CreateDbContext()) {
             DbUtil.DeleteDb(db);
             db.Database.EnsureCreated();
@@ -24,7 +26,7 @@ public class MessageRouter  {
                 .Where(e => e.State == MessageState.Pending || e.State == MessageState.AutoPending)
                 .ExecuteUpdate(e => e.SetProperty(x => x.State, MessageState.Unsent));
         }
-        this.AckHandler = ackHandler;
+        AckHandler = ackHandler;
     }
 
     private ServerDbContext CreateDbContext() => new(dbPath);
@@ -34,9 +36,11 @@ public class MessageRouter  {
         var conversationKey = DbUtil.GetConversationKey(message.SourceId, message.TargetId);
         using var db = CreateDbContext();
 
+        // Get the existing entry or null
         var existing = await db.HighestAcks
             .FirstOrDefaultAsync(e => e.ConversationKey == DbUtil.GetConversationKey(message.SourceId, message.TargetId) && e.SenderUsername == message.SourceId.Value);
 
+        // Create new entry if one does not exist yet
         if (existing is null) {
             db.HighestAcks.Add(new() {
                 ConversationKey = conversationKey,
@@ -45,21 +49,28 @@ public class MessageRouter  {
             });
         }
         else {
+            // Check for duplicate messages
             if (existing.HighestAck < message.Id)
                 existing.HighestAck = message.Id;
             else return false;
         }
+
         Console.WriteLine("Updating hightest ack");
         await db.SaveChangesAsync();
         return true;
     }
 
+    // Used during unsent message sweep. Sends the wrapped message to the target and if successful removes from db
     private async Task SendWrapperAsync(MessageWrapper wrapper, ServerDbContext db) {
+        // Get the MessageData object from the wrapper
         MessageData? message = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+
         if (message is null) {
             Console.WriteLine("Message data was null when attempting to send during sweep");
             return;
         }
+
+        // If the target is connected attempt sending
         if (handlers.TryGetValue(message.TargetId, out _)) {
             try {
                 bool result = await AckHandler.EnqueueMessageAsync(message);
@@ -87,13 +98,13 @@ public class MessageRouter  {
 
     }
 
-
+    // Routes message to the target and places it in the db
     public async Task RouteMessageAsync(MessageData message) {
         string conversationKey = DbUtil.GetConversationKey(message.SourceId, message.TargetId);
 
         using var db = CreateDbContext();
 
-
+        // Construct wrapper
         MessageWrapper wrapper = new() {
             ConversationKey = conversationKey,
             SequenceId = message.Id,
@@ -104,15 +115,20 @@ public class MessageRouter  {
             State = MessageState.Pending
         };
 
+        // Place unsent message in the db
         db.Messages.Add(wrapper);
+
+        // Must save the changes before sending or the message might be lost
         try {
             await db.SaveChangesAsync();
         }
+
         catch (DbUpdateException) {
             Console.WriteLine("Server received duplicate message, discarded");
             return;
         }
 
+        // Attempt sending
         if (handlers.TryGetValue(message.TargetId, out MessageConnectionHandler? targetHandler)) {
             try {
                 bool result = await AckHandler.EnqueueMessageAsync(message);
@@ -139,13 +155,16 @@ public class MessageRouter  {
         }
     }
 
-    public async Task DeliverPendingMessagesAsync(StringIdentifier userId, MessageConnectionHandler handler) {
+    // Attempts delivering all messages with unsent state to the specific user
+    public async Task DeliverPendingMessagesAsync(StringIdentifier userId) {
         using var db = CreateDbContext();
 
+        // Take control of unsent messages before attempting send, otherwise this could conflict with the automatic sweep
         await db.Messages
             .Where(m => m.ReceiverUsername == userId.Value && m.State == MessageState.Unsent)
             .ExecuteUpdateAsync(m => m.SetProperty(m => m.State, MessageState.Pending));
 
+        // Get claimed messages
         var pendingMessages = await db.Messages
             .Where(m => m.ReceiverUsername == userId.Value && m.State == MessageState.Pending)
             .OrderBy(m => m.SequenceId)
@@ -160,6 +179,7 @@ public class MessageRouter  {
         foreach (var wrapper in pendingMessages) {
             try {
                 MessageData? messageData = MessagePackSerializer.Deserialize<MessageData>(wrapper.SerializedMessageData);
+
                 if (messageData != null) {
                     sendTasks.Add(AckHandler.EnqueueMessageAsync(messageData));
                     Console.WriteLine("Pending message enqueued");
@@ -171,15 +191,20 @@ public class MessageRouter  {
             }
         }
 
+        // Await sending to finish
         bool[] results = await Task.WhenAll(sendTasks);
         int success = 0, failure = 0;
 
         for (int i = 0; i < sendTasks.Count; ++i) {
             if (results[i]) {
                 ++success;
+
+                // Remove message if the send was successful
                 db.Messages.Remove(realPendingMessages[i]);
             }
             else {
+
+                // Change state back to unsent for failed messages
                 realPendingMessages[i].State = MessageState.Unsent;
                 ++failure;
             }
@@ -187,10 +212,13 @@ public class MessageRouter  {
 
         if (realPendingMessages.Count > 0) {
             await db.SaveChangesAsync();
+
+            // Debug log
             Console.WriteLine($"Delivered {success} pending messages to {userId.Value}, failed {failure}");
         }
     }
 
+    // Starts a periodical sweep for unsent messages. This is a fallback for if the standard ways of message delivery fail
     public async Task StartUnsentSweepAsync(CancellationToken ct) {
         while (!ct.IsCancellationRequested) {
             Console.WriteLine("Sweeping...");
@@ -199,15 +227,18 @@ public class MessageRouter  {
             var onlineUsers = handlers.Keys.Select(x => x.Value).ToArray();
             try {
 
+                // Claim messages that can be sent to online users so they don't conflict with a reconnecting user
                 await db.Messages
                     .Where(m => m.State == MessageState.Unsent && onlineUsers.Contains(m.ReceiverUsername))
                     .ExecuteUpdateAsync(m => m.SetProperty(x => x.State, MessageState.AutoPending), ct);
                 
+                // Extract db entry
                 MessageWrapper[] unsent = await db.Messages
                     .Where(m => m.State == MessageState.AutoPending)
                     .OrderBy(m => m.SequenceId)
                     .ToArrayAsync(ct);
 
+                // Try send
                 foreach (MessageWrapper wrapper in unsent) {
                     await SendWrapperAsync(wrapper, db);
                 }

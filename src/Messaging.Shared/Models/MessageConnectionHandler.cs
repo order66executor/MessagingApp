@@ -2,11 +2,14 @@ using Messaging.Shared.Protocol;
 
 namespace Messaging.Shared.Models;
 
+// Wrapper class for MessageConnection that listens for incoming messages on the connection object's buffer
+// and forwards them for processing and listens for outgoing messages on the outBuffer 
+// and forwards them to the conn object for writing to the stream
 public class MessageConnectionHandler {
 
     private readonly MessageConnection conn;
 
-    //buffer to write outgoing messages to
+    // Buffer to listen for outgoing messages in
     private readonly MessageDataBuffer outBuffer;
     private readonly CancellationTokenSource cts;
     public StringIdentifier UserId { get; set; }
@@ -29,7 +32,7 @@ public class MessageConnectionHandler {
         outBuffer.Dispose();
     }
 
-    // Asynchronously read forever from conn.Buffer for incoming messages and pass them to protocol
+    // Asynchronously read forever from conn.Buffer for incoming messages and pass them to the dispatcher
     private async Task ProcessIncomingAsync(IMessageDispatcher dispatcher) {
         try {
             // wait forever for incoming
@@ -49,7 +52,7 @@ public class MessageConnectionHandler {
         }
     }
 
-    // Async wait for messages to be written to outBuffer and write them to the stream
+    // Async wait for messages to be written to outBuffer and call conn.WriteAsync
     private async Task ProcessOutgoingAsync() {
         try {
             await foreach (MessageData data in outBuffer.Reader.ReadAllAsync(cts.Token)) {

@@ -5,23 +5,22 @@ using System.Net.Security;
 
 namespace Messaging.Shared.Models;
 
+// Wrapper class for the TcpClient that handles listening for incoming messages and writes outgoing messages to the stream
 public class MessageConnection {
     private static readonly short sizeByteCount = 4;
     private readonly TcpClient client;
     public Stream Stream { get; }
     private readonly CancellationToken ct;
-    private readonly bool useTls;
 
     //Buffer where incoming MessageData is placed
     public MessageDataBuffer Buffer { get; }
 
     public MessageConnection(TcpClient client, bool useTls, CancellationToken ct) {
         this.client = client;
-        this.useTls = useTls;
         Buffer = new();
 
+        // Set the stream to an SslStream if TLS is being used
         Stream = !useTls ? client.GetStream() : new SslStream(client.GetStream(), leaveInnerStreamOpen: false);
-
 
         this.ct = ct;
 
@@ -91,8 +90,8 @@ public class MessageConnection {
 
     // Writes data to the stream
     public async Task WriteAsync(MessageData data) {
-        // serialize message
 
+        // serialize message
         byte[] payload = MessagePackSerializer.Serialize(data);
         int size = payload.Length;
 
@@ -108,8 +107,6 @@ public class MessageConnection {
         catch (OperationCanceledException e) {
             Console.WriteLine($"The operation was cancelled: {e.Message}");
         }
-
-
     }
 
 

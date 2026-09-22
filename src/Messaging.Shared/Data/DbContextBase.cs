@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Messaging.Shared.Data;
 
+// Base class for all DbContect overrides
 public class DbContextBase : DbContext {
     private readonly string dbPath;
 

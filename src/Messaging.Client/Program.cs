@@ -1,9 +1,7 @@
-using System.ComponentModel;
 using System.Net;
 using System.Text;
 using MessagePack;
 
-using Messaging.Client.Protocols;
 using Messaging.Shared.Data;
 using Messaging.Shared.Models;
 

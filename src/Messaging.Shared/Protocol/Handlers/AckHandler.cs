@@ -3,6 +3,7 @@ using Messaging.Shared.Services;
 
 namespace Messaging.Shared.Protocol.Handlers;
 
+// Handles ACK messages by submitting the ACK arrival to the wait handler
 public class AckHandler : IMessageHandler {
     public MessageType SupportedType => MessageType.Ack;
 

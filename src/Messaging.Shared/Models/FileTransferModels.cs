@@ -2,6 +2,9 @@ using MessagePack;
 
 namespace Messaging.Shared.Models;
 
+
+
+// File-related payload structures
 [MessagePackObject]
 public class FileUploadPayload {
     [Key(0)]
