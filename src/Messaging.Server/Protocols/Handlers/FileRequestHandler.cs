@@ -2,9 +2,10 @@ using System.Collections.Concurrent;
 
 using MessagePack;
 
-using Messaging.Server.Services;
+using Messaging.Shared.Services;
 using Messaging.Shared.Models;
 using Messaging.Shared.Protocol;
+using Messaging.Server.Services;
 
 namespace Messaging.Server.Protocols.Handlers;
 
