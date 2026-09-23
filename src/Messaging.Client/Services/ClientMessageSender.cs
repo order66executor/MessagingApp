@@ -14,17 +14,21 @@ public class ClientMessageSender {
     private readonly AckWaitHandler ackHandler;
     private readonly MessageConnectionHandler connHandler;
     private readonly IFileStorageService storageService;
-    private readonly ConcurrentDictionary<Guid, string> pendingFiles;
+    private readonly ConcurrentDictionary<Guid, string> currentUploads;
+    private readonly ConcurrentDictionary<Guid, byte> currentDownloads;
 
     public ClientMessageSender(StringIdentifier identifier, ClientDbHandler dbHandler,
-     AckWaitHandler ackHandler, MessageConnectionHandler connHandler, IFileStorageService storageService,
-     ConcurrentDictionary<Guid, string> pendingFiles) {
+        AckWaitHandler ackHandler, MessageConnectionHandler connHandler, IFileStorageService storageService,
+        ConcurrentDictionary<Guid, string> currentUploads,
+        ConcurrentDictionary<Guid, byte> currentDownloads) {
+
         this.identifier = identifier;
         this.dbHandler = dbHandler;
         this.ackHandler = ackHandler;
         this.connHandler = connHandler;
         this.storageService = storageService;
-        this.pendingFiles = pendingFiles;
+        this.currentUploads = currentUploads;
+        this.currentDownloads = currentDownloads;
     }
 
     public MessageData CreateAccountMessage(string password, MessageType type) {
@@ -94,23 +98,35 @@ public class ClientMessageSender {
 
     public async Task SendTextMessageAsync(StringIdentifier target, string text) {
         MessageData message = await CreateMessageDataAsync(MessageType.TextMessage, target, Encoding.UTF8.GetBytes(text));
+
         await SendAndWaitForAckAsync(message, saveToDb: true);
     }
 
     public async Task SendFileUploadAsync(StringIdentifier target, string filePath) {
         Guid transferId = Guid.NewGuid();
         var hash = await storageService.GetSha256Async(filePath);
-        pendingFiles.TryAdd(transferId, filePath);
-        var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileSize = storageService.GetFileSize(filePath), Sha256Hash = hash, ClientTransferId = transferId.ToString() };
+
+        currentUploads.TryAdd(transferId, filePath);
+
+        var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileSize = storageService.GetFileSize(filePath), Sha256Hash = hash, ClientTransferId = transferId };
 
         MessageData message = await CreateMessageDataAsync(MessageType.FileUpload, target, MessagePackSerializer.Serialize(payload));
         await SendAndWaitForAckAsync(message, saveToDb: true);
     }
 
     public async Task RequestFileAsync(string fileId) {
-        var payload = new FileRequestPayload { FileId = Guid.Parse(fileId) };
+        Guid guid = Guid.Parse(fileId);
+        var payload = new FileRequestPayload { FileId = guid };
+
+        if (!currentDownloads.TryAdd(guid, default)) {
+            Console.WriteLine("The file is already being downloaded");
+            return;
+        }
+
+
         // The server needs a way to know who is requesting, so target is SYSTEM, and source is this client
-        MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, new StringIdentifier("SYSTEM"), MessagePackSerializer.Serialize(payload));
+        MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, StringIdentifier.System, MessagePackSerializer.Serialize(payload));
+
         await SendAndWaitForAckAsync(message, saveToDb: false);
     }
 

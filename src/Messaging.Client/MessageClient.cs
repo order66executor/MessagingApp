@@ -57,9 +57,10 @@ public class MessageClient {
 
     private readonly FileStorageService storageService;
 
-    private readonly ConcurrentDictionary<Guid, string> pendingFiles;
+    private readonly ConcurrentDictionary<Guid, string> currentUploads;
 
     private readonly ConcurrentDictionary<Guid, string> fileHashes;
+    private readonly ConcurrentDictionary<Guid, byte> currentDownloads;
 
     public MessageClient(IPAddress address, int port, string username, string password, bool useTls) {
         this.address = address;
@@ -69,7 +70,8 @@ public class MessageClient {
         this.password = password;
         DbHandler = new();
         this.useTls = useTls;
-        pendingFiles = [ ];
+        currentUploads = [ ];
+        currentDownloads = [ ];
         fileHashes = [ ];
 
         string downloadsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
@@ -125,12 +127,12 @@ public class MessageClient {
         };
 
         waitHandler = new(handler, true, linked.Token);
-        sender = new(username, DbHandler, waitHandler, handler, storageService, pendingFiles);
+        sender = new(username, DbHandler, waitHandler, handler, storageService, currentUploads, currentDownloads);
 
         dispatcher = new MessageDispatcher([ new AckHandler(waitHandler), new FileNotificationHandler(DbHandler, handler),
             new FileResponseHandler(handler, storageService, fileHashes), new TextMessageHandler(DbHandler, handler),
-            new FileTransferReadyHandler(handler, storageService, pendingFiles, sender),
-            new SegmentHandler(storageService, fileHashes)]);
+            new FileTransferReadyHandler(handler, storageService, currentUploads, sender),
+            new SegmentHandler(storageService, fileHashes, currentDownloads)]);
 
         introCts.CancelAfter(TimeSpan.FromSeconds(5));
 

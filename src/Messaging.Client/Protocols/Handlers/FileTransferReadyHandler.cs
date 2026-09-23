@@ -13,15 +13,15 @@ public class FileTransferReadyHandler : IMessageHandler {
 
     private readonly MessageConnectionHandler connHandler;
     private readonly IFileStorageService storageService;
-    private readonly ConcurrentDictionary<Guid, string> pendingFiles;
+    private readonly ConcurrentDictionary<Guid, string> currentUploads;
     private readonly ClientMessageSender sender;
 
     public FileTransferReadyHandler(MessageConnectionHandler connHandler, 
-        IFileStorageService storageService, ConcurrentDictionary<Guid, string> pendingFiles,
+        IFileStorageService storageService, ConcurrentDictionary<Guid, string> currentUploads,
         ClientMessageSender sender) {
         this.connHandler = connHandler;
         this.storageService = storageService;
-        this.pendingFiles = pendingFiles;
+        this.currentUploads = currentUploads;
         this.sender = sender;
     }
 
@@ -37,7 +37,7 @@ public class FileTransferReadyHandler : IMessageHandler {
 
         if (readyPayload != null) {
             // Segmentize
-            if (!pendingFiles.TryGetValue(Guid.Parse(readyPayload.ClientTransferId), out string? path)) Console.WriteLine("File is not pending");
+            if (!currentUploads.TryRemove(readyPayload.ClientTransferId, out string? path)) Console.WriteLine("File is not pending");
             if (path is null) {
                 Console.WriteLine("Path is null");
                 return false;

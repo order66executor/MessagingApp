@@ -12,11 +12,13 @@ public class SegmentHandler : IMessageHandler {
 
     private readonly IFileStorageService storageService;
     private readonly ConcurrentDictionary<Guid, string> hashes;
+    private readonly ConcurrentDictionary<Guid, byte>? currentDownloads;
 
 
-    public SegmentHandler(IFileStorageService storageService, ConcurrentDictionary<Guid, string> hashes) {
+    public SegmentHandler(IFileStorageService storageService, ConcurrentDictionary<Guid, string> hashes, ConcurrentDictionary<Guid, byte>? currentDownloads = null) {
         this.storageService = storageService;
         this.hashes = hashes;
+        this.currentDownloads = currentDownloads;
     }
 
     public async Task<bool> HandleAsync(MessageData message) {
@@ -28,10 +30,10 @@ public class SegmentHandler : IMessageHandler {
             Console.WriteLine("Failed to write segment to disk");
             return false;
         }
-        bool match = false;
+        bool match = true;
 
         if (segment.IsEnd) {
-            if (!hashes.TryGetValue(guid, out var hash)) {
+            if (!hashes.TryRemove(guid, out var hash)) {
                 Console.WriteLine("Hash is not in dict");
                 return false;
             }
@@ -42,6 +44,7 @@ public class SegmentHandler : IMessageHandler {
             else Console.WriteLine("Hashes do NOT match!");
 
             storageService.CloseStream(guid); 
+            if (currentDownloads is not null) currentDownloads.Remove(guid, out _);
         }
 
         return match;
