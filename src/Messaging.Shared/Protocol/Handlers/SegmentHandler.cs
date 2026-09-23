@@ -21,7 +21,7 @@ public class SegmentHandler : IMessageHandler {
 
     public async Task<bool> HandleAsync(MessageData message) {
         Segment segment = MessagePackSerializer.Deserialize<Segment>(message.Payload);
-        Guid guid = Guid.Parse(segment.Id);
+        Guid guid = segment.Id;
 
         bool success = await storageService.WriteAsync(guid, segment.Data);
         if (!success) {

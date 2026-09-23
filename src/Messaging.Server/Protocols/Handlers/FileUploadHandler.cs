@@ -50,7 +50,7 @@ public class FileUploadHandler : IMessageHandler {
 
         // Signal ready
         var readyPayload = new FileTransferReadyPayload() {
-            FileId = fileId.ToString(),
+            FileId = fileId,
             ClientTransferId = uploadPayload.ClientTransferId
         };
         MessageData readyMessage = new() {
@@ -68,7 +68,7 @@ public class FileUploadHandler : IMessageHandler {
 
         // Notify recipient
         var notificationPayload = new FileNotificationPayload() {
-            FileId = fileId.ToString(),
+            FileId = fileId,
             FileName = Path.GetFileName(uploadPayload.FileName),
             FileSize = uploadPayload.FileSize
         };

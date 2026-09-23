@@ -98,7 +98,7 @@ public partial class ChatAreaViewModel : ViewModelBase, IRecipient<ConversationS
                 if (notifPayload != null)
                 {
                     vm.IsFileNotification = true;
-                    vm.FileId = notifPayload.FileId;
+                    vm.FileId = notifPayload.FileId.ToString();
                     vm.FileName = notifPayload.FileName;
                     vm.FileSizeDisplay = $"{notifPayload.FileSize / 1024} KB";
                     vm.Text = $"📎 {notifPayload.FileName}";

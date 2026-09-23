@@ -20,7 +20,7 @@ public class FileUploadPayload {
 [MessagePackObject]
 public class FileNotificationPayload {
     [Key(0)]
-    public required string FileId { get; set; }
+    public required Guid FileId { get; set; }
     [Key(1)]
     public required string FileName { get; set; }
     [Key(2)]
@@ -30,13 +30,13 @@ public class FileNotificationPayload {
 [MessagePackObject]
 public class FileRequestPayload {
     [Key(0)]
-    public required string FileId { get; set; }
+    public required Guid FileId { get; set; }
 }
 
 [MessagePackObject]
 public class FileResponsePayload {
     [Key(0)]
-    public required string FileId { get; set; }
+    public required Guid FileId { get; set; }
     [Key(1)]
     public required string FileName { get; set; }
     [Key(2)]
@@ -46,7 +46,7 @@ public class FileResponsePayload {
 [MessagePackObject]
 public class FileTransferReadyPayload {
     [Key(0)]
-    public required string FileId { get; set; }
+    public required Guid FileId { get; set; }
     [Key(1)]
     public required string ClientTransferId { get; set; }
 }

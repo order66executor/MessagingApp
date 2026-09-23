@@ -5,7 +5,7 @@ namespace Messaging.Shared.Models;
 [MessagePackObject]
 public class Segment {
     [Key(0)]
-    public required string Id;
+    public required Guid Id;
     [Key(1)]
     public required int Size { get; set; }
     [Key(2)]

@@ -23,7 +23,7 @@ public class FileResponseHandler : IMessageHandler {
     public async Task<bool> HandleAsync(MessageData message) {
         // Deserialize payload
         var resPayload = MessagePackSerializer.Deserialize<FileResponsePayload>(message.Payload);
-        Guid guid = Guid.Parse(resPayload.FileId);
+        Guid guid = resPayload.FileId;
 
         if (resPayload != null) {
             // Open stream

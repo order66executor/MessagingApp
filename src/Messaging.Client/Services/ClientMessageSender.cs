@@ -108,7 +108,7 @@ public class ClientMessageSender {
     }
 
     public async Task RequestFileAsync(string fileId) {
-        var payload = new FileRequestPayload { FileId = fileId };
+        var payload = new FileRequestPayload { FileId = Guid.Parse(fileId) };
         // The server needs a way to know who is requesting, so target is SYSTEM, and source is this client
         MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, new StringIdentifier("SYSTEM"), MessagePackSerializer.Serialize(payload));
         await SendAndWaitForAckAsync(message, saveToDb: false);
