@@ -130,6 +130,7 @@ public class ClientMessageSender {
 
         if (!await SendAndWaitForAckAsync(message, saveToDb: false))
             currentDownloads.Remove(guid, out _);
+        Console.WriteLine("Request acked");
     }
 
     public async Task SendSegmentAsync(Segment segment) {
