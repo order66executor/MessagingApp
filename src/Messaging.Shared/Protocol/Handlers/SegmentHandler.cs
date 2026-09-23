@@ -38,8 +38,10 @@ public class SegmentHandler : IMessageHandler {
                 return false;
             }
 
+            string path = storageService.GetPathOfStream(guid);
+
             storageService.CloseStream(guid); 
-            match = await storageService.CheckSha256Async(storageService.GetPathOfStream(guid), hash);
+            match = await storageService.CheckSha256Async(path, hash);
 
             if (match) Console.WriteLine("Hashes match");
             else Console.WriteLine("Hashes do NOT match!");
