@@ -31,13 +31,15 @@ public class FileStorageService : IFileStorageService {
 
         if (Path.Exists(savePath)) {
             int i = 1;
-            while (true) {
-                if (!Path.Exists($"{i}_" + savePath)) {
-                    savePath = $"{i}_" + savePath;
-                    break;
-                }
+
+            string candidate;
+
+            do {
+                candidate = Path.Combine(DefaultDirectory, $"{i}_{fileName}");
                 ++i;
-            }
+            } while (Path.Exists(candidate));
+
+            savePath = candidate;
         }
 
         streams.TryAdd(guid, new FileStream(savePath, FileMode.OpenOrCreate));
