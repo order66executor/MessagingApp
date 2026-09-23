@@ -2,6 +2,8 @@ using Messaging.Shared.Models;
 using Messaging.Shared.Protocol;
 
 using MessagePack;
+using Messaging.Shared.Services;
+using System.Collections.Concurrent;
 
 namespace Messaging.Client.Protocols.Handlers;
 
@@ -9,25 +11,24 @@ public class FileResponseHandler : IMessageHandler {
     public MessageType SupportedType { get; } = MessageType.FileResponse;
 
     private readonly MessageConnectionHandler connHandler;
+    private readonly IFileStorageService storageService;
+    private readonly ConcurrentDictionary<Guid, string> hashes;
 
-    public FileResponseHandler(MessageConnectionHandler connHandler) {
+    public FileResponseHandler(MessageConnectionHandler connHandler, IFileStorageService storageService, ConcurrentDictionary<Guid, string> hashes) {
         this.connHandler = connHandler;
+        this.storageService = storageService;
+        this.hashes = hashes;
     }
 
     public async Task<bool> HandleAsync(MessageData message) {
         // Deserialize payload
         var resPayload = MessagePackSerializer.Deserialize<FileResponsePayload>(message.Payload);
+        Guid guid = Guid.Parse(resPayload.FileId);
 
         if (resPayload != null) {
-            // Get the downloads directory
-            string downloadsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
-            string savePath = Path.Combine(downloadsDir, resPayload.FileName);
-
-            // Write file to disk
-            await File.WriteAllBytesAsync(savePath, resPayload.FileData);
-
-            Console.WriteLine($"File downloaded and saved to: {savePath}");
-            // Here we might want to trigger a local UI event
+            // Open stream
+            storageService.CreateWriteStream(guid, resPayload.FileName);
+            hashes.TryAdd(guid, resPayload.Sha256Hash);
         }
 
         // Reply ack

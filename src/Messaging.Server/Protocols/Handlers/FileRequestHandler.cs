@@ -28,11 +28,17 @@ public class FileRequestHandler : IMessageHandler {
 
     // Routes the requested file to the source 
     public async Task<bool> HandleAsync(MessageData message) {
+        _ = Process(message);
+        return true;
+        
+    }
+
+    private async Task<bool> Process(MessageData message) {
         if (!handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler))
             return false;
 
-        // Acknowledge receipt
-        var ack = AckFactory.CreateAck(new("SYSTEM"), new("SYSTEM"), message.Id);
+        // Acknowledge receipt (source and target has to be system, the ack logic sucks a little)
+        var ack = AckFactory.CreateAck(StringIdentifier.System, StringIdentifier.System, message.Id);
         await handler.WriteToOutBufferAsync(ack);
 
         // Deserialize the request payload
@@ -40,14 +46,14 @@ public class FileRequestHandler : IMessageHandler {
         if (requestPayload is null) return false;
 
         // Get the requested file from disk, currently loads the whole file into memory. TODO: file streaming and packetization
-        var requestedFile = await storageService.GetFileAsync(requestPayload.FileId);
-        if (!requestedFile.HasValue) return false;
+        string path = storageService.GetAbsolutePath($"{requestPayload.FileId}_*");
+        string filePath = Directory.GetFiles(path).First();
 
         // Construct file response payload
         var responsePayload = new FileResponsePayload() {
             FileId = requestPayload.FileId,
-            FileName = requestedFile.Value.FileName,
-            FileData = requestedFile.Value.Data
+            FileName = Path.GetFileName(filePath),
+            Sha256Hash = await storageService.GetSha256Async(filePath)
         };
 
         // Construct MessageData object with the payload
@@ -60,10 +66,45 @@ public class FileRequestHandler : IMessageHandler {
             Payload = MessagePackSerializer.Serialize(responsePayload)
         };
 
-        // Route the message and do not wait
-        _ = router.RouteMessageAsync(response);
-        return true;
-        
-    }
+        // Route the message and do await
+        await router.RouteMessageAsync(response);
 
+        Segment segment;
+        MessageData segmentMessage = new() {
+                Id = 0,
+                Type = MessageType.Segment,
+                SourceId = StringIdentifier.System,
+                TargetId = message.SourceId,
+                SentAtUtc = DateTime.UtcNow,
+                Payload = [ ]
+        };
+
+        await foreach(var data in storageService.ReadAllAsync(path)) {
+            segment = new() {
+                Id = requestPayload.FileId,
+                Size = data.Length,
+                Data = data.ToArray(),
+                IsEnd = false
+            };
+
+            segmentMessage.Payload = MessagePackSerializer.Serialize(segment);
+
+            await handler.WriteToOutBufferAsync(segmentMessage);
+
+        }
+
+        segment = new() {
+            Id = requestPayload.FileId,
+            Size = 0,
+            Data = [ ],
+            IsEnd = true
+        };
+        segmentMessage.Payload = MessagePackSerializer.Serialize(segment);
+
+        await handler.WriteToOutBufferAsync(segmentMessage);
+
+        Console.WriteLine("File sent");
+
+        return true;
+    }
 }

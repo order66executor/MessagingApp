@@ -13,6 +13,7 @@ using System.Text;
 using Messaging.Shared.Protocol;
 using Messaging.Shared.Protocol.Handlers;
 using Messaging.Client.Protocols.Handlers;
+using System.Collections.Concurrent;
 
 namespace Messaging.Client;
 
@@ -54,6 +55,12 @@ public class MessageClient {
     // Message sender object that routes through waitHandler
     private ClientMessageSender? sender;
 
+    private readonly FileStorageService storageService;
+
+    private readonly ConcurrentDictionary<string, string> pendingFiles;
+
+    private readonly ConcurrentDictionary<Guid, string> fileHashes;
+
     public MessageClient(IPAddress address, int port, string username, string password, bool useTls) {
         this.address = address;
         this.port = port;
@@ -62,6 +69,11 @@ public class MessageClient {
         this.password = password;
         DbHandler = new();
         this.useTls = useTls;
+        pendingFiles = [ ];
+        fileHashes = [ ];
+
+        string downloadsDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.UserProfile), "Downloads");
+        storageService = new(downloadsDir);
     }
 
     // Attempt connecting to server
@@ -111,9 +123,14 @@ public class MessageClient {
         handler = new(conn, linked.Token) {
             UserId = new("SYSTEM")
         };
+
         waitHandler = new(handler, true, linked.Token);
-        dispatcher = new MessageDispatcher([ new AckHandler(waitHandler), new FileNotificationHandler(DbHandler, handler), new FileResponseHandler(handler), new TextMessageHandler(DbHandler, handler) ]);
-        sender = new(username, DbHandler, waitHandler);
+        sender = new(username, DbHandler, waitHandler, handler, storageService, pendingFiles);
+
+        dispatcher = new MessageDispatcher([ new AckHandler(waitHandler), new FileNotificationHandler(DbHandler, handler),
+            new FileResponseHandler(handler, storageService, fileHashes), new TextMessageHandler(DbHandler, handler),
+            new FileTransferReadyHandler(handler, storageService, pendingFiles, sender),
+            new SegmentHandler(storageService, fileHashes)]);
 
         introCts.CancelAfter(TimeSpan.FromSeconds(5));
 
@@ -193,7 +210,7 @@ public class MessageClient {
 
     public async Task SendFileAsync(string target, string filePath) {
         if (sender is null) return;
-        await sender.SendFileAsync(new StringIdentifier(target), filePath);
+        await sender.SendFileUploadAsync(new StringIdentifier(target), filePath);
     }
 
     public async Task RequestFileAsync(string fileId) {

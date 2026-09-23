@@ -5,16 +5,26 @@ using MessagePack;
 
 using System.Text;
 using Messaging.Shared.Services;
+using System.Collections.Concurrent;
+using System.Security.Cryptography;
 
 public class ClientMessageSender {
     private readonly StringIdentifier identifier;
     private readonly ClientDbHandler dbHandler;
     private readonly AckWaitHandler ackHandler;
+    private readonly MessageConnectionHandler connHandler;
+    private readonly IFileStorageService storageService;
+    private readonly ConcurrentDictionary<string, string> pendingFiles;
 
-    public ClientMessageSender(StringIdentifier identifier, ClientDbHandler dbHandler, AckWaitHandler ackHandler) {
+    public ClientMessageSender(StringIdentifier identifier, ClientDbHandler dbHandler,
+     AckWaitHandler ackHandler, MessageConnectionHandler connHandler, IFileStorageService storageService,
+     ConcurrentDictionary<string, string> pendingFiles) {
         this.identifier = identifier;
         this.dbHandler = dbHandler;
         this.ackHandler = ackHandler;
+        this.connHandler = connHandler;
+        this.storageService = storageService;
+        this.pendingFiles = pendingFiles;
     }
 
     public MessageData CreateAccountMessage(string password, MessageType type) {
@@ -33,7 +43,7 @@ public class ClientMessageSender {
 
     private async Task<MessageData> CreateMessageDataAsync(MessageType type, StringIdentifier target, byte[] payload) {
         MessageData message = new() {
-            Id = await dbHandler.GetHighestSequenceIdAsync(target) + 1,
+            Id = target == StringIdentifier.System ? 0 : await dbHandler.GetHighestSequenceIdAsync(target) + 1,
             Type = type,
             SourceId = identifier,
             TargetId = target,
@@ -51,7 +61,7 @@ public class ClientMessageSender {
         MessageData messageToSave = message;
 
         // Strip the heavy binary data before saving to local SQLite DB
-        if (message.Type == MessageType.FileUpload) {
+        /* if (message.Type == MessageType.FileUpload) {
             var originalPayload = MessagePackSerializer.Deserialize<FileUploadPayload>(message.Payload);
             if (originalPayload != null) {
                 var emptyPayload = new FileUploadPayload { 
@@ -67,7 +77,7 @@ public class ClientMessageSender {
                     Payload = MessagePackSerializer.Serialize(emptyPayload)
                 };
             }
-        }
+        } */
         MessageWrapper? wrapper = null;
         if (saveToDb) 
             wrapper = await dbHandler.PlaceMessageAsync(messageToSave, MessageState.Pending);
@@ -87,9 +97,11 @@ public class ClientMessageSender {
         await SendAndWaitForAckAsync(message, saveToDb: true);
     }
 
-    public async Task SendFileAsync(StringIdentifier target, string filePath) {
-        byte[] fileBytes = await File.ReadAllBytesAsync(filePath);
-        var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileData = fileBytes };
+    public async Task SendFileUploadAsync(StringIdentifier target, string filePath) {
+        var hash = await storageService.GetSha256Async(filePath);
+        pendingFiles.TryAdd(hash, filePath);
+        var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileSize = storageService.GetFileSize(filePath), Sha256Hash = hash };
+
         MessageData message = await CreateMessageDataAsync(MessageType.FileUpload, target, MessagePackSerializer.Serialize(payload));
         await SendAndWaitForAckAsync(message, saveToDb: true);
     }
@@ -99,6 +111,13 @@ public class ClientMessageSender {
         // The server needs a way to know who is requesting, so target is SYSTEM, and source is this client
         MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, new StringIdentifier("SYSTEM"), MessagePackSerializer.Serialize(payload));
         await SendAndWaitForAckAsync(message, saveToDb: false);
+    }
+
+    public async Task SendSegmentAsync(Segment segment) {
+        var payload = MessagePackSerializer.Serialize(segment);
+
+        MessageData message = await CreateMessageDataAsync(MessageType.Segment, StringIdentifier.System, payload);
+        await connHandler.WriteToOutBufferAsync(message);
     }
 
 

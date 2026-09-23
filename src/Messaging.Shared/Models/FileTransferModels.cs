@@ -10,7 +10,9 @@ public class FileUploadPayload {
     [Key(0)]
     public required string FileName { get; set; }
     [Key(1)]
-    public required byte[] FileData { get; set; }
+    public required long FileSize { get; set; }
+    [Key(2)]
+    public required string Sha256Hash { get; set; }
 }
 
 [MessagePackObject]
@@ -36,5 +38,13 @@ public class FileResponsePayload {
     [Key(1)]
     public required string FileName { get; set; }
     [Key(2)]
-    public required byte[] FileData { get; set; }
+    public required string Sha256Hash { get; set; }
+}
+
+[MessagePackObject]
+public class FileTransferReadyPayload {
+    [Key(0)]
+    public required string FileId { get; set; }
+    [Key(1)]
+    public required string Sha256Hash { get; set; }
 }

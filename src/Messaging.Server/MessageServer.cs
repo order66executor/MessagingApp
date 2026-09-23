@@ -28,12 +28,12 @@ public class MessageServer {
     private readonly bool useTls;
 
     private readonly ConcurrentDictionary<StringIdentifier, MessageConnectionHandler> handlers;
-
     private readonly ConcurrentDictionary<Guid, Task> tasks;
     private readonly MessageRouter router;
     private readonly ConcurrentDictionary<StringIdentifier, CancellationToken> tokens;
     private readonly CancellationToken ct;
     private readonly AccountDbHandler accDbHandler;
+    private readonly ConcurrentDictionary<Guid, string> fileHashes;
 
     public MessageServer(int port, bool useTls, CancellationToken ct) {
         Port = port;
@@ -43,8 +43,11 @@ public class MessageServer {
         tokens = new();
         AckWaitHandler waitHandler = new(handlers, retry: false, tokens: tokens, ct: ct);
         router = new MessageRouter(handlers, waitHandler);
-        FileStorageService service = new(Path.Combine(Environment.CurrentDirectory, "FileStorage"));
-        dispatcher = new ServerDispatcher([ new AckHandler(waitHandler), new TextMessageHandler(handlers, router), new FileUploadHandler(handlers, router, service), new FileRequestHandler(handlers, router, service) ]);
+        FileStorageService storageService = new(Path.Combine(Environment.CurrentDirectory, "FileStorage"));
+        fileHashes = [ ] ;
+        dispatcher = new ServerDispatcher([ new AckHandler(waitHandler), new TextMessageHandler(handlers, router),
+            new FileUploadHandler(handlers, router, storageService, fileHashes), new FileRequestHandler(handlers, router, storageService),
+            new SegmentHandler(storageService, fileHashes)]);
         tasks = [ ];
         this.ct = ct;
         accDbHandler = new();

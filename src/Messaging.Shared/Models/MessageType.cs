@@ -10,5 +10,7 @@ public enum MessageType {
     FileUpload,
     FileNotification,
     FileRequest,
-    FileResponse
+    FileResponse,
+    FileTransferReady,
+    Segment
 }
