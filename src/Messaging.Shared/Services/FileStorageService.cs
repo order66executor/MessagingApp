@@ -17,7 +17,7 @@ public class FileStorageService : IFileStorageService {
         string sanitizedFileName = Path.GetFileName(fileName);
         string savePath = Path.Combine(directory, $"{fileId}_{sanitizedFileName}");
         
-        await File.WriteAllBytesAsync(savePath, data, ct); // Writ to disk
+        await File.WriteAllBytesAsync(savePath, data, ct); // Write to disk
         return fileId;
 
     }
