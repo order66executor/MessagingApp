@@ -5,7 +5,7 @@ namespace Messaging.Shared.Models;
 //FIFO type 
 public class MessageDataBuffer : IDisposable {
     private readonly Channel<MessageData> channel =
-        Channel.CreateUnbounded<MessageData>(new UnboundedChannelOptions
+        Channel.CreateBounded<MessageData>(new BoundedChannelOptions(capacity: 64)
         {
             SingleReader = true,   // set true if only one loop reads it
             SingleWriter = false

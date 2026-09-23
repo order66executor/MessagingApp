@@ -52,7 +52,7 @@ public class FileRequestHandler : IMessageHandler {
         // Construct file response payload
         var responsePayload = new FileResponsePayload() {
             FileId = requestPayload.FileId,
-            FileName = Path.GetFileName(filePath),
+            FileName = Path.GetFileName(filePath)[(requestPayload.FileId.Length + 1)..],
             Sha256Hash = await storageService.GetSha256Async(filePath)
         };
 
@@ -79,7 +79,7 @@ public class FileRequestHandler : IMessageHandler {
                 Payload = [ ]
         };
 
-        await foreach(var data in storageService.ReadAllAsync(path)) {
+        await foreach (var data in storageService.ReadAllAsync(filePath)) {
             segment = new() {
                 Id = requestPayload.FileId,
                 Size = data.Length,

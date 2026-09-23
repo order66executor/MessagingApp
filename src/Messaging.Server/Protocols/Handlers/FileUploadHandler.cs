@@ -51,7 +51,7 @@ public class FileUploadHandler : IMessageHandler {
         // Signal ready
         var readyPayload = new FileTransferReadyPayload() {
             FileId = fileId.ToString(),
-            Sha256Hash = uploadPayload.Sha256Hash
+            ClientTransferId = uploadPayload.ClientTransferId
         };
         MessageData readyMessage = new() {
             Id = 0,

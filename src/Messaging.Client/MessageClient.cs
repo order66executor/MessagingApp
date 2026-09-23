@@ -57,7 +57,7 @@ public class MessageClient {
 
     private readonly FileStorageService storageService;
 
-    private readonly ConcurrentDictionary<string, string> pendingFiles;
+    private readonly ConcurrentDictionary<Guid, string> pendingFiles;
 
     private readonly ConcurrentDictionary<Guid, string> fileHashes;
 

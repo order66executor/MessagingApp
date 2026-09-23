@@ -14,11 +14,11 @@ public class ClientMessageSender {
     private readonly AckWaitHandler ackHandler;
     private readonly MessageConnectionHandler connHandler;
     private readonly IFileStorageService storageService;
-    private readonly ConcurrentDictionary<string, string> pendingFiles;
+    private readonly ConcurrentDictionary<Guid, string> pendingFiles;
 
     public ClientMessageSender(StringIdentifier identifier, ClientDbHandler dbHandler,
      AckWaitHandler ackHandler, MessageConnectionHandler connHandler, IFileStorageService storageService,
-     ConcurrentDictionary<string, string> pendingFiles) {
+     ConcurrentDictionary<Guid, string> pendingFiles) {
         this.identifier = identifier;
         this.dbHandler = dbHandler;
         this.ackHandler = ackHandler;
@@ -98,9 +98,10 @@ public class ClientMessageSender {
     }
 
     public async Task SendFileUploadAsync(StringIdentifier target, string filePath) {
+        Guid transferId = Guid.NewGuid();
         var hash = await storageService.GetSha256Async(filePath);
-        pendingFiles.TryAdd(hash, filePath);
-        var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileSize = storageService.GetFileSize(filePath), Sha256Hash = hash };
+        pendingFiles.TryAdd(transferId, filePath);
+        var payload = new FileUploadPayload { FileName = Path.GetFileName(filePath), FileSize = storageService.GetFileSize(filePath), Sha256Hash = hash, ClientTransferId = transferId.ToString() };
 
         MessageData message = await CreateMessageDataAsync(MessageType.FileUpload, target, MessagePackSerializer.Serialize(payload));
         await SendAndWaitForAckAsync(message, saveToDb: true);
