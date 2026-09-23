@@ -61,7 +61,7 @@ public class ClientMessageSender {
     }
 
     // Sends the message and waits for an ack before returning, optionally saves the message to the db (turn off when sending system messages)
-    private async Task SendAndWaitForAckAsync(MessageData message, bool saveToDb) {
+    private async Task<bool> SendAndWaitForAckAsync(MessageData message, bool saveToDb) {
         MessageData messageToSave = message;
 
         // Strip the heavy binary data before saving to local SQLite DB
@@ -94,6 +94,8 @@ public class ClientMessageSender {
         if (saveToDb && wrapper is not null) 
             await dbHandler.UpdateMessageStateAsync(wrapper.Id, result ? MessageState.Sent : MessageState.Unsent);
 
+        return result;
+
     }
 
     public async Task SendTextMessageAsync(StringIdentifier target, string text) {
@@ -123,11 +125,11 @@ public class ClientMessageSender {
             return;
         }
 
-
         // The server needs a way to know who is requesting, so target is SYSTEM, and source is this client
         MessageData message = await CreateMessageDataAsync(MessageType.FileRequest, StringIdentifier.System, MessagePackSerializer.Serialize(payload));
 
-        await SendAndWaitForAckAsync(message, saveToDb: false);
+        if (!await SendAndWaitForAckAsync(message, saveToDb: false))
+            currentDownloads.Remove(guid, out _);
     }
 
     public async Task SendSegmentAsync(Segment segment) {
