@@ -34,6 +34,7 @@ public class FileRequestHandler : IMessageHandler {
     }
 
     private async Task<bool> Process(MessageData message) {
+        Console.WriteLine("Received request");
         if (!handlers.TryGetValue(message.SourceId, out MessageConnectionHandler? handler))
             return false;
 
@@ -53,6 +54,8 @@ public class FileRequestHandler : IMessageHandler {
             Console.WriteLine("File ID not found");
             return false;
         }
+
+        Console.WriteLine("File exists");
 
         // Construct file response payload
         var responsePayload = new FileResponsePayload() {
