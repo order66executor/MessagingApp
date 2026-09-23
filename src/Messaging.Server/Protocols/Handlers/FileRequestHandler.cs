@@ -79,14 +79,7 @@ public class FileRequestHandler : IMessageHandler {
         Console.WriteLine("Response routed");
 
         Segment segment;
-        MessageData segmentMessage = new() {
-                Id = 0,
-                Type = MessageType.Segment,
-                SourceId = StringIdentifier.System,
-                TargetId = message.SourceId,
-                SentAtUtc = DateTime.UtcNow,
-                Payload = [ ]
-        };
+        MessageData segmentMessage;
 
         await foreach (var data in storageService.ReadAllAsync(filePath)) {
             segment = new() {
@@ -96,7 +89,14 @@ public class FileRequestHandler : IMessageHandler {
                 IsEnd = false
             };
 
-            segmentMessage.Payload = MessagePackSerializer.Serialize(segment);
+            segmentMessage = new() {
+                Id = 0,
+                Type = MessageType.Segment,
+                SourceId = StringIdentifier.System,
+                TargetId = message.SourceId,
+                SentAtUtc = DateTime.UtcNow,
+                Payload = MessagePackSerializer.Serialize(segment)
+            };
 
             await handler.WriteToOutBufferAsync(segmentMessage);
 
@@ -108,7 +108,16 @@ public class FileRequestHandler : IMessageHandler {
             Data = [ ],
             IsEnd = true
         };
-        segmentMessage.Payload = MessagePackSerializer.Serialize(segment);
+
+        segmentMessage = new() {
+                Id = 0,
+                Type = MessageType.Segment,
+                SourceId = StringIdentifier.System,
+                TargetId = message.SourceId,
+                SentAtUtc = DateTime.UtcNow,
+                Payload = MessagePackSerializer.Serialize(segment)
+        };
+
 
         await handler.WriteToOutBufferAsync(segmentMessage);
 
