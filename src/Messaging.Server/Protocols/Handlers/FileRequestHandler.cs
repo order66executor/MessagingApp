@@ -47,7 +47,12 @@ public class FileRequestHandler : IMessageHandler {
 
         // Get the requested file from disk, currently loads the whole file into memory. TODO: file streaming and packetization
         string path = storageService.GetAbsolutePath($"{requestPayload.FileId}_*");
-        string filePath = Directory.GetFiles(path).First();
+        string? filePath = Directory.GetFiles(path).FirstOrDefault();
+
+        if (filePath is null) {
+            Console.WriteLine("File ID not found");
+            return false;
+        }
 
         // Construct file response payload
         var responsePayload = new FileResponsePayload() {
@@ -68,6 +73,7 @@ public class FileRequestHandler : IMessageHandler {
 
         // Route the message and do await
         await router.RouteMessageAsync(response);
+        Console.WriteLine("Response routed");
 
         Segment segment;
         MessageData segmentMessage = new() {
